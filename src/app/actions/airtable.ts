@@ -2,15 +2,7 @@
 
 import Airtable from 'airtable';
 
-// Make sure to set these in your .env file
 const { AIRTABLE_API_KEY, AIRTABLE_BASE_ID, AIRTABLE_TABLE_NAME } = process.env;
-
-if (!AIRTABLE_API_KEY || !AIRTABLE_BASE_ID || !AIRTABLE_TABLE_NAME) {
-  console.error("Airtable environment variables are not set.");
-}
-
-const base = new Airtable({ apiKey: AIRTABLE_API_KEY }).base(AIRTABLE_BASE_ID!);
-const table = base(AIRTABLE_TABLE_NAME!);
 
 interface ActivityData {
   name: string;
@@ -19,8 +11,11 @@ interface ActivityData {
 
 export async function saveActivitiesToAirtable(activities: ActivityData[]) {
   if (!AIRTABLE_API_KEY || !AIRTABLE_BASE_ID || !AIRTABLE_TABLE_NAME) {
-    return { success: false, error: "Airtable configuration is missing on the server." };
+    return { success: false, error: "Airtable configuration is missing on the server. Please check your .env file." };
   }
+  
+  const base = new Airtable({ apiKey: AIRTABLE_API_KEY }).base(AIRTABLE_BASE_ID!);
+  const table = base(AIRTABLE_TABLE_NAME!);
 
   const records = activities.map(activity => ({
     fields: {
