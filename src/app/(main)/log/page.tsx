@@ -1,13 +1,15 @@
 'use client';
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useTransition } from 'react';
 import { mockActivities } from '@/lib/data';
 import type { Activity } from '@/lib/types';
 import { Button } from '@/components/ui/button';
-import { PlusCircle, Sparkles } from 'lucide-react';
+import { PlusCircle, Sparkles, Loader2 } from 'lucide-react';
 import { LogTimeDialog } from '@/components/log-time-dialog';
 import { AddActivityDialog } from '@/components/add-activity-dialog';
 import { UnloggedTimeSuggestions } from '@/components/unlogged-time-suggestions';
+import { saveActivitiesToAirtable } from '@/app/actions/airtable';
+import { useToast } from '@/hooks/use-toast';
 
 type LoggedActivity = {
   activity: Activity;
@@ -55,6 +57,8 @@ export default function LogTimePage() {
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [isLogTimeDialogOpen, setIsLogTimeDialogOpen] = useState(false);
   const [selectedActivity, setSelectedActivity] = useState<LoggedActivity | null>(null);
+  const [isPending, startTransition] = useTransition();
+  const { toast } = useToast();
 
   useEffect(() => {
     setIsClient(true);
@@ -95,6 +99,40 @@ export default function LogTimePage() {
   const openLogTimeDialog = (loggedActivity: LoggedActivity) => {
     setSelectedActivity(loggedActivity);
     setIsLogTimeDialogOpen(true);
+  };
+  
+  const handleSaveLog = () => {
+    startTransition(async () => {
+      const activitiesToSave = loggedActivities.filter(la => la.duration > 0);
+      if(activitiesToSave.length === 0) {
+        toast({
+          title: "No activities to save",
+          description: "Please log time for at least one activity.",
+          variant: "destructive"
+        });
+        return;
+      }
+
+      const result = await saveActivitiesToAirtable(activitiesToSave.map(la => ({
+        name: la.activity.name,
+        duration: la.duration,
+      })));
+
+      if (result.success) {
+        toast({
+          title: "Log Saved!",
+          description: "Your activities have been saved to Airtable.",
+        });
+        // Reset durations after saving
+        setLoggedActivities(prev => prev.map(la => ({...la, duration: 0})));
+      } else {
+        toast({
+          title: "Error",
+          description: result.error,
+          variant: "destructive",
+        });
+      }
+    });
   };
 
   if (!isClient) {
@@ -150,7 +188,10 @@ export default function LogTimePage() {
       </div>
 
       <div className="py-8 mt-4 text-center">
-        <Button size="lg">Save Day's Log</Button>
+        <Button size="lg" onClick={handleSaveLog} disabled={isPending}>
+          {isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+          Save Day's Log
+        </Button>
       </div>
 
       <AddActivityDialog
