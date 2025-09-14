@@ -41,9 +41,9 @@ export async function saveActivitiesToAirtable(activities: ActivityData[]) {
 
   const records = activities.map(activity => ({
     fields: {
-      'Activity name': activity.name,
-      'duration (minutes)': activity.duration,
-      'date': new Date().toISOString(),
+      'Activity Name': activity.name,
+      'Duration (minutes)': activity.duration,
+      'Date': new Date().toISOString().split('T')[0], // Format as YYYY-MM-DD
       'Entry Type': 'Log'
     },
   }));
@@ -68,9 +68,9 @@ export async function saveMoodToAirtable(moodData: MoodData) {
   const record = {
     fields: {
       'Check-in time': new Date().toISOString(),
-      'energy (1-10)': moodData.energy,
-      'focus (1-10)': moodData.focus,
-      'mood (1-10)': moodData.mood,
+      'Energy (1-10)': moodData.energy,
+      'Focus (1-10)': moodData.focus,
+      'Mood (1-10)': moodData.mood,
     },
   };
 
