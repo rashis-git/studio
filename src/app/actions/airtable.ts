@@ -43,7 +43,7 @@ export async function saveActivitiesToAirtable(activities: ActivityData[]) {
     fields: {
       'Activity Name': activity.name,
       'Duration (minutes)': activity.duration,
-      'Date': new Date().toISOString().split('T')[0], // Format as YYYY-MM-DD
+      'Date': new Date().toISOString().split('T')[0],
       'Entry Type': 'Log'
     },
   }));
