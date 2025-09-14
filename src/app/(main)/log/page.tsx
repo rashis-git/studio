@@ -4,11 +4,12 @@ import { useState, useEffect, useMemo, useTransition } from 'react';
 import { mockActivities } from '@/lib/data';
 import type { Activity } from '@/lib/types';
 import { Button } from '@/components/ui/button';
-import { PlusCircle, Sparkles, Loader2 } from 'lucide-react';
+import { PlusCircle, Sparkles, Loader2, Smile } from 'lucide-react';
 import { LogTimeDialog } from '@/components/log-time-dialog';
 import { AddActivityDialog } from '@/components/add-activity-dialog';
+import { LogMoodDialog } from '@/components/log-mood-dialog';
 import { UnloggedTimeSuggestions } from '@/components/unlogged-time-suggestions';
-import { saveActivitiesToAirtable } from '@/app/actions/airtable';
+import { saveActivitiesToAirtable, saveMoodToAirtable } from '@/app/actions/airtable';
 import { useToast } from '@/hooks/use-toast';
 
 type LoggedActivity = {
@@ -56,6 +57,7 @@ export default function LogTimePage() {
   const [isClient, setIsClient] = useState(false);
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [isLogTimeDialogOpen, setIsLogTimeDialogOpen] = useState(false);
+  const [isLogMoodDialogOpen, setIsLogMoodDialogOpen] = useState(false);
   const [selectedActivity, setSelectedActivity] = useState<LoggedActivity | null>(null);
   const [isPending, startTransition] = useTransition();
   const { toast } = useToast();
@@ -135,6 +137,24 @@ export default function LogTimePage() {
     });
   };
 
+  const handleSaveMood = (mood: { energy: number, focus: number, mood: number }) => {
+    startTransition(async () => {
+        const result = await saveMoodToAirtable(mood);
+        if (result.success) {
+            toast({
+                title: "Mood Saved!",
+                description: "Your mood has been logged to Airtable.",
+            });
+        } else {
+            toast({
+                title: "Error",
+                description: result.error,
+                variant: "destructive",
+            });
+        }
+    });
+  };
+
   if (!isClient) {
     return (
       <div className="p-4 space-y-4">
@@ -154,9 +174,16 @@ export default function LogTimePage() {
   return (
     <div className="p-4 pt-8">
       <header className="mb-8 text-center">
-        <h1 className="text-3xl font-bold font-headline">Log Your Time</h1>
-        <p className="text-muted-foreground">Tap a bubble to set the duration.</p>
+        <h1 className="text-3xl font-bold font-headline">Log Your Day</h1>
+        <p className="text-muted-foreground">Tap an activity to log time, or log your mood.</p>
       </header>
+      
+      <div className="mb-6 text-center">
+        <Button variant="outline" onClick={() => setIsLogMoodDialogOpen(true)}>
+            <Smile className="mr-2" />
+            Log Mood & Energy
+        </Button>
+      </div>
 
       <div className="flex flex-wrap items-center justify-center gap-4 p-4 min-h-[40vh] bg-muted/30 rounded-xl">
         {loggedActivities.length > 0 ? (
@@ -209,6 +236,13 @@ export default function LogTimePage() {
           onSave={handleUpdateDuration}
         />
       )}
+
+      <LogMoodDialog
+        open={isLogMoodDialogOpen}
+        onOpenChange={setIsLogMoodDialogOpen}
+        onSave={handleSaveMood}
+        isPending={isPending}
+      />
     </div>
   );
 }
