@@ -15,7 +15,8 @@ import {
   signInWithEmailAndPassword,
   createUserWithEmailAndPassword,
 } from 'firebase/auth';
-import { auth } from '@/lib/firebase';
+import { auth, db } from '@/lib/firebase';
+import { doc, setDoc, serverTimestamp } from 'firebase/firestore';
 import type { AuthCredential } from 'firebase/auth';
 
 interface AuthContextType {
@@ -45,8 +46,17 @@ export const AuthProvider: FC<{children: ReactNode}> = ({ children }) => {
     return signInWithEmailAndPassword(auth, email, pass);
   }
 
-  const signup = (email: string, pass: string) => {
-    return createUserWithEmailAndPassword(auth, email, pass);
+  const signup = async (email: string, pass: string) => {
+    const userCredential = await createUserWithEmailAndPassword(auth, email, pass);
+    const user = userCredential.user;
+    
+    // Create a document in the 'users' collection
+    await setDoc(doc(db, 'users', user.uid), {
+      email: user.email,
+      createdAt: serverTimestamp(),
+    });
+
+    return userCredential;
   }
 
   const logout = () => {
