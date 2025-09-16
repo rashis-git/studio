@@ -2,7 +2,7 @@
 'use server';
 
 import { db } from '@/lib/firebase';
-import { collection, addDoc, serverTimestamp, doc, setDoc } from 'firebase/firestore';
+import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
 
 interface ActivityData {
   name: string;
@@ -64,20 +64,5 @@ export async function saveMoodToFirestore(moodData: MoodData) {
   } catch (error: any) {
     console.error('Error in saveMoodToFirestore:', error);
     return { success: false, error: error.message || 'Failed to save mood.' };
-  }
-}
-
-export async function createUserInFirestore(userId: string, email: string | null) {
-  console.log(`Server Action: createUserInFirestore called for userId: ${userId}`);
-  try {
-    await setDoc(doc(db, 'users', userId), {
-      email: email,
-      createdAt: serverTimestamp(),
-    });
-    console.log(`Successfully created user document in Firestore for userId: ${userId}`);
-    return { success: true };
-  } catch (error: any) {
-    console.error('Error creating user document in Firestore:', error.message);
-    return { success: false, error: error.message || 'Failed to create user document.' };
   }
 }

@@ -6,9 +6,8 @@ import { useRouter } from 'next/navigation';
 import { useAuth } from '@/hooks/use-auth';
 import { MainNav } from '@/components/main-nav';
 import { Loader2 } from 'lucide-react';
-import { doc, getDoc } from 'firebase/firestore';
+import { doc, getDoc, setDoc, serverTimestamp } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
-import { createUserInFirestore } from '@/app/actions/firestore';
 
 export default function MainLayout({
   children,
@@ -35,13 +34,12 @@ export default function MainLayout({
         try {
           const userDocSnap = await getDoc(userDocRef);
           if (!userDocSnap.exists()) {
-            console.log('MainLayout: User document not found in Firestore. Creating...');
-            const result = await createUserInFirestore(user.uid, user.email);
-            if (result.success) {
-              console.log('MainLayout: Successfully created user document in Firestore.');
-            } else {
-              console.error('MainLayout: Failed to create user document.', result.error);
-            }
+            console.log('MainLayout: User document not found in Firestore. Creating on client...');
+            await setDoc(userDocRef, {
+              email: user.email,
+              createdAt: serverTimestamp(),
+            });
+            console.log('MainLayout: Successfully created user document in Firestore.');
           } else {
             console.log('MainLayout: User document already exists in Firestore.');
           }
