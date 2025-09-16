@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useMemo } from 'react';
@@ -24,9 +25,9 @@ const cardVariants = {
     transition: { type: 'spring', stiffness: 100, damping: 20 },
   },
   exit: (direction: number) => ({
-    x: direction > 0 ? '-100vw' : '100vw',
+    x: direction > 0 ? '100vw' : '-100vw',
     opacity: 0,
-    rotate: direction > 0 ? -30 : 30,
+    rotate: direction > 0 ? 30 : 30,
     scale: 0.8,
     transition: { ease: 'easeInOut', duration: 0.4 },
   }),
@@ -40,10 +41,10 @@ export default function ActivitySwipePage() {
 
   const activeActivity = useMemo(() => activities[activities.length - 1], [activities]);
 
-  const handleSwipe = (isRightSwipe: boolean) => {
-    setDirection(isRightSwipe ? 1 : -1);
+  const handleSwipe = (select: boolean) => {
+    setDirection(select ? 1 : -1);
     
-    if (isRightSwipe && activeActivity) {
+    if (select && activeActivity) {
       setSelectedActivities((prev) => [...prev, activeActivity.id]);
     }
     
@@ -81,7 +82,7 @@ export default function ActivitySwipePage() {
               dragConstraints={{ left: 0, right: 0 }}
               onDragEnd={(_, info) => {
                 if (Math.abs(info.offset.x) > 100) {
-                  handleSwipe(info.offset.x < 0);
+                  handleSwipe(info.offset.x > 0);
                 }
               }}
               className="absolute w-full max-w-xs h-full"
