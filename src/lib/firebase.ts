@@ -8,7 +8,9 @@ if (!firebaseConfigString) {
   throw new Error('Firebase config not found in environment variables');
 }
 
-const firebaseConfig = JSON.parse(firebaseConfigString);
+const firebaseConfig = typeof firebaseConfigString === 'string' 
+  ? JSON.parse(firebaseConfigString) 
+  : firebaseConfigString;
 
 // Initialize Firebase
 let app: FirebaseApp;
