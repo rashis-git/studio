@@ -22,7 +22,7 @@ import { auth } from '@/lib/firebase';
 interface AuthContextType {
   user: User | null;
   loading: boolean;
-  login: (email: string, pass: string) => Promise<UserCredential>;
+  login: (email: string, pass:string) => Promise<UserCredential>;
   logout: () => Promise<void>;
   signup: (email: string, pass: string) => Promise<UserCredential>;
 }
@@ -74,7 +74,7 @@ export const AuthProvider: FC<{ children: ReactNode }> = ({ children }) => {
 
   return (
     <AuthContext.Provider value={value}>
-      {!loading && children}
+      {children}
     </AuthContext.Provider>
   );
 };
@@ -82,4 +82,7 @@ export const AuthProvider: FC<{ children: ReactNode }> = ({ children }) => {
 export const useAuth = () => {
   const context = useContext(AuthContext);
   if (context === undefined) {
-    throw new Error
+    throw new Error('useAuth must be used within an AuthProvider');
+  }
+  return context;
+};
