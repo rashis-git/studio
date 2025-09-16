@@ -33,7 +33,7 @@ export async function saveActivitiesToFirestore(activities: ActivityData[]) {
         date: new Date().toISOString().split('T')[0], // YYYY-MM-DD
         entryType: 'Log',
         timestamp: serverTimestamp(),
-        userId: activity.userId, // Ensuring userId is included
+        userId: activity.userId,
       });
     });
 
@@ -57,7 +57,7 @@ export async function saveMoodToFirestore(moodData: MoodData) {
       energy: moodData.energy,
       focus: moodData.focus,
       mood: moodData.mood,
-      userId: moodData.userId, // Ensuring userId is included
+      userId: moodData.userId,
     });
     console.log('Server Action: saveMoodToFirestore successful.');
     return { success: true };
