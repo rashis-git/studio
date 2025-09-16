@@ -9,7 +9,7 @@ import { LogTimeDialog } from '@/components/log-time-dialog';
 import { AddActivityDialog } from '@/components/add-activity-dialog';
 import { LogMoodDialog } from '@/components/log-mood-dialog';
 import { UnloggedTimeSuggestions } from '@/components/unlogged-time-suggestions';
-import { saveActivitiesToAirtable, saveMoodToAirtable } from '@/app/actions/airtable';
+import { saveActivitiesToFirestore, saveMoodToFirestore } from '@/app/actions/firestore';
 import { useToast } from '@/hooks/use-toast';
 
 type LoggedActivity = {
@@ -115,7 +115,7 @@ export default function LogTimePage() {
         return;
       }
 
-      const result = await saveActivitiesToAirtable(activitiesToSave.map(la => ({
+      const result = await saveActivitiesToFirestore(activitiesToSave.map(la => ({
         name: la.activity.name,
         duration: la.duration,
       })));
@@ -123,7 +123,7 @@ export default function LogTimePage() {
       if (result.success) {
         toast({
           title: "Log Saved!",
-          description: "Your activities have been saved to Airtable.",
+          description: "Your activities have been saved to Firestore.",
         });
         // Reset durations after saving
         setLoggedActivities(prev => prev.map(la => ({...la, duration: 0})));
@@ -139,11 +139,11 @@ export default function LogTimePage() {
 
   const handleSaveMood = (mood: { energy: number, focus: number, mood: number }) => {
     startTransition(async () => {
-        const result = await saveMoodToAirtable(mood);
+        const result = await saveMoodToFirestore(mood);
         if (result.success) {
             toast({
                 title: "Mood Saved!",
-                description: "Your mood has been logged to Airtable.",
+                description: "Your mood has been logged to Firestore.",
             });
         } else {
             toast({
