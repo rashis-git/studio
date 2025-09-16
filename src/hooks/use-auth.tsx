@@ -45,7 +45,7 @@ export const AuthProvider: FC<{children: ReactNode}> = ({ children }) => {
     return signInWithEmailAndPassword(auth, email, pass);
   }
 
-  const signup = async (email: string, pass: string) => {
+  const signup = (email: string, pass: string) => {
     return createUserWithEmailAndPassword(auth, email, pass);
   }
 
