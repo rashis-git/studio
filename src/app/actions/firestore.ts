@@ -27,6 +27,7 @@ export async function saveActivitiesToFirestore(activities: ActivityData[]) {
     console.log(`Saving ${activities.length} activities for userId: ${userId}`);
     
     const activityPromises = activities.map(activity => {
+      console.log('Saving activity:', activity.name, 'for user:', activity.userId);
       return addDoc(collection(db, 'activity-logs'), {
         activityName: activity.name,
         durationMinutes: activity.duration,
@@ -52,6 +53,7 @@ export async function saveMoodToFirestore(moodData: MoodData) {
     if (!moodData.userId) {
       throw new Error('User ID is missing.');
     }
+    console.log('Saving mood for user:', moodData.userId);
     await addDoc(collection(db, 'state-logs'), {
       checkInTime: serverTimestamp(),
       energy: moodData.energy,
