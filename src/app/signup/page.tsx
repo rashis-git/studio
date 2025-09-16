@@ -11,12 +11,13 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
 import { Loader2 } from 'lucide-react';
+import { createUserInFirestore } from '@/app/actions/firestore';
 
 export default function SignupPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  const { signup } from useAuth();
+  const { signup } = useAuth();
   const router = useRouter();
   const { toast } = useToast();
 
@@ -24,7 +25,9 @@ export default function SignupPage() {
     e.preventDefault();
     setIsLoading(true);
     try {
-      await signup(email, password);
+      const userCredential = await signup(email, password);
+      const user = userCredential.user;
+      await createUserInFirestore(user.uid, user.email);
       router.push('/');
     } catch (error: any) {
       toast({
