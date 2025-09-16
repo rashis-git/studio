@@ -14,15 +14,16 @@ import {
   signOut,
   signInWithEmailAndPassword,
   createUserWithEmailAndPassword,
+  UserCredential,
 } from 'firebase/auth';
 import { auth } from '@/lib/firebase';
 
 interface AuthContextType {
   user: User | null;
   loading: boolean;
-  login: (email: string, pass: string) => Promise<any>;
-  logout: () => Promise<any>;
-  signup: (email: string, pass: string) => Promise<any>;
+  login: (email: string, pass: string) => Promise<UserCredential>;
+  logout: () => Promise<void>;
+  signup: (email: string, pass: string) => Promise<UserCredential>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);

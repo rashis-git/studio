@@ -21,6 +21,7 @@ export async function saveActivitiesToFirestore(activities: ActivityData[]) {
     if (!activities.length || !activities[0].userId) {
       throw new Error('User ID is missing.');
     }
+    const userId = activities[0].userId;
     const activityPromises = activities.map(activity => {
       return addDoc(collection(db, 'activity-logs'), {
         activityName: activity.name,
@@ -28,7 +29,7 @@ export async function saveActivitiesToFirestore(activities: ActivityData[]) {
         date: new Date().toISOString().split('T')[0], // YYYY-MM-DD
         entryType: 'Log',
         timestamp: serverTimestamp(),
-        userId: activity.userId,
+        userId: userId,
       });
     });
     await Promise.all(activityPromises);
