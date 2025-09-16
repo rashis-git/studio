@@ -107,14 +107,27 @@ export default function LogTimePage() {
   };
   
   const handleSaveLog = () => {
+    console.log('LogPage: handleSaveLog triggered.');
+
     if (!user) {
+      console.error('LogPage: handleSaveLog failed. User is not authenticated.');
       toast({ title: "Not authenticated", description: "You must be logged in to save.", variant: "destructive" });
       return;
     }
+    console.log('LogPage: User is authenticated. UID:', user.uid);
+
 
     startTransition(async () => {
-      const activitiesToSave = loggedActivities.filter(la => la.duration > 0);
+      const activitiesToSave = loggedActivities
+        .filter(la => la.duration > 0)
+        .map(la => ({
+          name: la.activity.name,
+          duration: la.duration,
+          userId: user.uid,
+        }));
+        
       if(activitiesToSave.length === 0) {
+        console.warn('LogPage: No activities with duration > 0 to save.');
         toast({
           title: "No activities to save",
           description: "Please log time for at least one activity.",
@@ -122,14 +135,14 @@ export default function LogTimePage() {
         });
         return;
       }
+      
+      console.log('LogPage: Preparing to save activities. Data being sent:', activitiesToSave);
+      const result = await saveActivitiesToFirestore(activitiesToSave);
+      console.log('LogPage: Received result from server action:', result);
 
-      const result = await saveActivitiesToFirestore(activitiesToSave.map(la => ({
-        name: la.activity.name,
-        duration: la.duration,
-        userId: user.uid,
-      })));
 
       if (result.success) {
+        console.log('LogPage: Save successful. Displaying success toast.');
         toast({
           title: "Log Saved!",
           description: "Your activities have been saved.",
@@ -137,6 +150,7 @@ export default function LogTimePage() {
         // Reset durations after saving
         setLoggedActivities(prev => prev.map(la => ({...la, duration: 0})));
       } else {
+        console.error('LogPage: Save failed. Displaying error toast. Error:', result.error);
         toast({
           title: "Error",
           description: result.error,

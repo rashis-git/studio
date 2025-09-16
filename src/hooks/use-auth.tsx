@@ -37,7 +37,7 @@ export const AuthProvider: FC<{ children: ReactNode }> = ({ children }) => {
     console.log('AuthProvider: Setting up onAuthStateChanged listener.');
     const unsubscribe = onAuthStateChanged(auth, (user) => {
       if (user) {
-        console.log('onAuthStateChanged: User is signed in.', user.uid);
+        console.log('onAuthStateChanged: User is signed in. UID:', user.uid);
         setUser(user);
       } else {
         console.log('onAuthStateChanged: User is signed out.');

@@ -19,15 +19,26 @@ interface MoodData {
 
 export async function saveActivitiesToFirestore(activities: ActivityData[]) {
   console.log('Server Action: saveActivitiesToFirestore started.');
+  console.log('Server Action: Received data:', activities);
+  
   try {
-    if (!activities.length || !activities[0].userId) {
-      throw new Error('User ID is missing.');
+    if (!activities || activities.length === 0) {
+      console.error('Server Action Error: No activities provided.');
+      throw new Error('No activities to save.');
     }
     const userId = activities[0].userId;
-    console.log(`Saving ${activities.length} activities for userId: ${userId}`);
+    if (!userId) {
+      console.error('Server Action Error: User ID is missing in the first activity.');
+      throw new Error('User ID is missing.');
+    }
+    console.log(`Server Action: Processing ${activities.length} activities for userId: ${userId}`);
     
     const activityPromises = activities.map(activity => {
-      console.log('Saving activity:', activity.name, 'for user:', activity.userId);
+      console.log('Server Action: Preparing to write activity:', activity);
+      if (activity.userId !== userId) {
+        console.error('Server Action Error: Mismatched user IDs in batch.');
+        // Potentially throw an error or handle this case
+      }
       return addDoc(collection(db, 'activity-logs'), {
         activityName: activity.name,
         durationMinutes: activity.duration,
@@ -39,10 +50,10 @@ export async function saveActivitiesToFirestore(activities: ActivityData[]) {
     });
 
     await Promise.all(activityPromises);
-    console.log('Server Action: saveActivitiesToFirestore successful.');
+    console.log('Server Action: All activities saved successfully to Firestore.');
     return { success: true };
   } catch (error: any) {
-    console.error('Error in saveActivitiesToFirestore:', error);
+    console.error('Server Action: Firestore write failed. Full error object:', error);
     return { success: false, error: error.message || 'Failed to save activities.' };
   }
 }
