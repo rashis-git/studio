@@ -24,16 +24,34 @@ export default function SignupPage() {
   const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
+    console.log('Signup attempt started for:', email);
+
     try {
+      // Step 1: Create user in Firebase Auth
       const userCredential = await signup(email, password);
       const user = userCredential.user;
-      await createUserInFirestore(user.uid, user.email);
-      router.push('/');
+      console.log('Firebase Auth user created successfully:', user.uid);
+
+      // Step 2: Create user document in Firestore
+      console.log('Attempting to create user document in Firestore...');
+      const result = await createUserInFirestore(user.uid, user.email);
+
+      if (result.success) {
+        console.log('Successfully created user document in Firestore.');
+        toast({
+          title: "Signup Successful",
+          description: "Welcome! You are now being redirected.",
+        });
+        router.push('/');
+      } else {
+        throw new Error(result.error || 'Failed to create user document.');
+      }
     } catch (error: any) {
+      console.error('An error occurred during signup:', error.message);
       toast({
         title: "Signup Failed",
         description: error.message,
-        variant: 'destructive'
+        variant: 'destructive',
       });
       setIsLoading(false);
     }
@@ -61,28 +79,10 @@ export default function SignupPage() {
             </div>
             <div className="space-y-2">
               <Label htmlFor="password">Password</Label>
-              <Input 
-                id="password" 
-                type="password" 
-                required 
+              <Input
+                id="password"
+                type="password"
+                required
                 minLength={6}
                 value={password}
-                onChange={(e) => setPassword(e.target.value)}
-              />
-            </div>
-            <Button type="submit" className="w-full" disabled={isLoading}>
-              {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              Create Account
-            </Button>
-          </form>
-          <div className="mt-4 text-center text-sm">
-            Already have an account?{' '}
-            <Link href="/login" className="underline">
-              Login
-            </Link>
-          </div>
-        </CardContent>
-      </Card>
-    </div>
-  );
-}
+                onChange={(e) => setPassword(e.g
