@@ -18,10 +18,11 @@ export async function saveActivitiesToFirestore(activities: ActivityData[]) {
   try {
     const activityPromises = activities.map(activity => {
       return addDoc(collection(db, 'activity-logs'), {
-        'Activity Name': activity.name,
-        'Duration (minutes)': activity.duration,
-        'Date': new Date(),
-        'Entry Type': 'Log',
+        activityName: activity.name,
+        durationMinutes: activity.duration,
+        date: new Date().toISOString().split('T')[0], // YYYY-MM-DD
+        entryType: 'Log',
+        timestamp: serverTimestamp()
       });
     });
     await Promise.all(activityPromises);
@@ -35,10 +36,10 @@ export async function saveActivitiesToFirestore(activities: ActivityData[]) {
 export async function saveMoodToFirestore(moodData: MoodData) {
   try {
     await addDoc(collection(db, 'state-logs'), {
-      'Check-in time': serverTimestamp(),
-      'Energy (1-10)': moodData.energy,
-      'Focus (1-10)': moodData.focus,
-      'Mood (1-10)': moodData.mood,
+      checkInTime: serverTimestamp(),
+      energy: moodData.energy,
+      focus: moodData.focus,
+      mood: moodData.mood,
     });
     return { success: true };
   } catch (error) {
