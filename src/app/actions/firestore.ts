@@ -27,9 +27,9 @@ export async function saveActivitiesToFirestore(activities: ActivityData[]) {
     });
     await Promise.all(activityPromises);
     return { success: true };
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error saving activities to Firestore:', error);
-    return { success: false, error: 'Failed to save activities to Firestore.' };
+    return { success: false, error: error.message || 'Failed to save activities to Firestore.' };
   }
 }
 
@@ -42,8 +42,8 @@ export async function saveMoodToFirestore(moodData: MoodData) {
       mood: moodData.mood,
     });
     return { success: true };
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error saving mood to Firestore:', error);
-    return { success: false, error: 'Failed to save mood to Firestore.' };
+    return { success: false, error: error.message || 'Failed to save mood to Firestore.' };
   }
 }
