@@ -18,6 +18,9 @@ interface MoodData {
 
 export async function saveActivitiesToFirestore(activities: ActivityData[]) {
   try {
+    if (!activities.length || !activities[0].userId) {
+      throw new Error('User ID is missing.');
+    }
     const activityPromises = activities.map(activity => {
       return addDoc(collection(db, 'activity-logs'), {
         activityName: activity.name,
@@ -38,6 +41,9 @@ export async function saveActivitiesToFirestore(activities: ActivityData[]) {
 
 export async function saveMoodToFirestore(moodData: MoodData) {
   try {
+    if (!moodData.userId) {
+      throw new Error('User ID is missing.');
+    }
     await addDoc(collection(db, 'state-logs'), {
       checkInTime: serverTimestamp(),
       energy: moodData.energy,
