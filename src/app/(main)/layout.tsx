@@ -6,6 +6,9 @@ import { useRouter } from 'next/navigation';
 import { useAuth } from '@/hooks/use-auth';
 import { MainNav } from '@/components/main-nav';
 import { Loader2 } from 'lucide-react';
+import { doc, getDoc } from 'firebase/firestore';
+import { db } from '@/lib/firebase';
+import { createUserInFirestore } from '@/app/actions/firestore';
 
 export default function MainLayout({
   children,
@@ -23,6 +26,31 @@ export default function MainLayout({
   useEffect(() => {
     if (!loading && !user && isClient) {
       router.push('/login');
+    }
+
+    if (user) {
+      const checkAndCreateUser = async () => {
+        console.log('MainLayout: Auth state confirmed for user:', user.uid);
+        const userDocRef = doc(db, 'users', user.uid);
+        try {
+          const userDocSnap = await getDoc(userDocRef);
+          if (!userDocSnap.exists()) {
+            console.log('MainLayout: User document not found in Firestore. Creating...');
+            const result = await createUserInFirestore(user.uid, user.email);
+            if (result.success) {
+              console.log('MainLayout: Successfully created user document in Firestore.');
+            } else {
+              console.error('MainLayout: Failed to create user document.', result.error);
+            }
+          } else {
+            console.log('MainLayout: User document already exists in Firestore.');
+          }
+        } catch (error) {
+          console.error('MainLayout: Error checking/creating user document:', error);
+        }
+      };
+
+      checkAndCreateUser();
     }
   }, [user, loading, router, isClient]);
 

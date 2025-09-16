@@ -11,7 +11,6 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
 import { Loader2 } from 'lucide-react';
-import { createUserInFirestore } from '@/app/actions/firestore';
 
 export default function SignupPage() {
   const [email, setEmail] = useState('');
@@ -24,33 +23,28 @@ export default function SignupPage() {
   const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
-    console.log('Signup attempt started for:', email);
+    console.log('SignupPage: handleSignup started for:', email);
 
     try {
-      // Step 1: Create user in Firebase Auth
-      const userCredential = await signup(email, password);
-      const user = userCredential.user;
-      console.log('Firebase Auth user created successfully:', user.uid);
+      // Step 1: Create user in Firebase Auth. The database document will be created
+      // by the main layout after the auth state is confirmed.
+      await signup(email, password);
+      console.log('SignupPage: Firebase Auth user created successfully.');
+      
+      toast({
+        title: "Account Created!",
+        description: "Redirecting you to the app...",
+      });
 
-      // Step 2: Create user document in Firestore
-      console.log('Attempting to create user document in Firestore...');
-      const result = await createUserInFirestore(user.uid, user.email);
+      // Step 2: Redirect to the main app.
+      // The logic in MainLayout will handle creating the Firestore document.
+      router.push('/');
 
-      if (result.success) {
-        console.log('Successfully created user document in Firestore.');
-        toast({
-          title: "Signup Successful",
-          description: "Welcome! You are now being redirected.",
-        });
-        router.push('/');
-      } else {
-        throw new Error(result.error || 'Failed to create user document.');
-      }
     } catch (error: any) {
-      console.error('An error occurred during signup:', error.message);
+      console.error('SignupPage: An error occurred during signup:', error);
       toast({
         title: "Signup Failed",
-        description: error.message,
+        description: error.message || 'An unknown error occurred.',
         variant: 'destructive',
       });
       setIsLoading(false);
