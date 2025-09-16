@@ -10,9 +10,11 @@ import { LogTimeDialog } from '@/components/log-time-dialog';
 import { AddActivityDialog } from '@/components/add-activity-dialog';
 import { LogMoodDialog } from '@/components/log-mood-dialog';
 import { UnloggedTimeSuggestions } from '@/components/unlogged-time-suggestions';
-import { saveActivitiesToFirestore, saveMoodToFirestore } from '@/app/actions/firestore';
+import { saveMoodToFirestore } from '@/app/actions/firestore';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/use-auth';
+import { db } from '@/lib/firebase';
+import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
 
 type LoggedActivity = {
   activity: Activity;
@@ -116,32 +118,37 @@ export default function LogTimePage() {
     }
     console.log('LogPage: User is authenticated. UID:', user.uid);
 
-
-    startTransition(async () => {
-      const activitiesToSave = loggedActivities
-        .filter(la => la.duration > 0)
-        .map(la => ({
-          name: la.activity.name,
-          duration: la.duration,
-          userId: user.uid,
-        }));
-        
-      if(activitiesToSave.length === 0) {
-        console.warn('LogPage: No activities with duration > 0 to save.');
-        toast({
-          title: "No activities to save",
-          description: "Please log time for at least one activity.",
-          variant: "destructive"
-        });
-        return;
-      }
+    const activitiesToSave = loggedActivities
+      .filter(la => la.duration > 0)
+      .map(la => ({
+        activityName: la.activity.name,
+        durationMinutes: la.duration,
+        date: new Date().toISOString().split('T')[0],
+        entryType: 'Log',
+        timestamp: serverTimestamp(),
+        userId: user.uid,
+      }));
       
-      console.log('LogPage: Preparing to save activities. Data being sent:', activitiesToSave);
-      const result = await saveActivitiesToFirestore(activitiesToSave);
-      console.log('LogPage: Received result from server action:', result);
+    if(activitiesToSave.length === 0) {
+      console.warn('LogPage: No activities with duration > 0 to save.');
+      toast({
+        title: "No activities to save",
+        description: "Please log time for at least one activity.",
+        variant: "destructive"
+      });
+      return;
+    }
+    
+    console.log('LogPage: Preparing to save activities. Data being sent:', activitiesToSave);
+    
+    startTransition(async () => {
+      try {
+        const activityPromises = activitiesToSave.map(activity => {
+          return addDoc(collection(db, 'activity-logs'), activity);
+        });
 
-
-      if (result.success) {
+        await Promise.all(activityPromises);
+        
         console.log('LogPage: Save successful. Displaying success toast.');
         toast({
           title: "Log Saved!",
@@ -149,11 +156,12 @@ export default function LogTimePage() {
         });
         // Reset durations after saving
         setLoggedActivities(prev => prev.map(la => ({...la, duration: 0})));
-      } else {
-        console.error('LogPage: Save failed. Displaying error toast. Error:', result.error);
+
+      } catch (error: any) {
+        console.error('LogPage: Save failed. Displaying error toast. Error:', error);
         toast({
-          title: "Error",
-          description: result.error,
+          title: "Error Saving Log",
+          description: error.message || "An unknown error occurred.",
           variant: "destructive",
         });
       }
