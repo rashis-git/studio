@@ -1,3 +1,5 @@
+'use client';
+
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
@@ -5,8 +7,18 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Input } from "@/components/ui/input";
+import { useAuth } from "@/hooks/use-auth";
+import { useRouter } from "next/navigation";
 
 export default function SettingsPage() {
+  const { user, logout } = useAuth();
+  const router = useRouter();
+
+  const handleLogout = async () => {
+    await logout();
+    router.push('/login');
+  };
+
   return (
     <div className="p-4 pt-8 space-y-8">
       <header className="text-center">
@@ -22,17 +34,17 @@ export default function SettingsPage() {
         <CardContent className="space-y-6">
           <div className="flex items-center gap-4">
             <Avatar className="w-16 h-16">
-              <AvatarImage src="https://picsum.photos/seed/user/100/100" />
-              <AvatarFallback>U</AvatarFallback>
+              <AvatarImage src={user?.photoURL ?? "https://picsum.photos/seed/user/100/100"} />
+              <AvatarFallback>{user?.email?.charAt(0).toUpperCase() ?? 'U'}</AvatarFallback>
             </Avatar>
             <div className="flex-1 space-y-2">
               <Label htmlFor="name">Name</Label>
-              <Input id="name" defaultValue="Sample User" />
+              <Input id="name" defaultValue={user?.displayName ?? "Sample User"} />
             </div>
           </div>
           <div className="space-y-2">
             <Label htmlFor="email">Email</Label>
-            <Input id="email" type="email" defaultValue="user@example.com" />
+            <Input id="email" type="email" defaultValue={user?.email ?? "user@example.com"} readOnly />
           </div>
         </CardContent>
       </Card>
@@ -67,8 +79,9 @@ export default function SettingsPage() {
         </CardContent>
       </Card>
 
-      <div className="pt-4 text-center">
+      <div className="pt-4 text-center space-y-4">
         <Button size="lg">Save Changes</Button>
+        <Button size="lg" variant="destructive" onClick={handleLogout}>Sign Out</Button>
       </div>
     </div>
   );

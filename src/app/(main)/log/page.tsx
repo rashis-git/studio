@@ -11,6 +11,7 @@ import { LogMoodDialog } from '@/components/log-mood-dialog';
 import { UnloggedTimeSuggestions } from '@/components/unlogged-time-suggestions';
 import { saveActivitiesToFirestore, saveMoodToFirestore } from '@/app/actions/firestore';
 import { useToast } from '@/hooks/use-toast';
+import { useAuth } from '@/hooks/use-auth';
 
 type LoggedActivity = {
   activity: Activity;
@@ -61,6 +62,7 @@ export default function LogTimePage() {
   const [selectedActivity, setSelectedActivity] = useState<LoggedActivity | null>(null);
   const [isPending, startTransition] = useTransition();
   const { toast } = useToast();
+  const { user } = useAuth();
 
   useEffect(() => {
     setIsClient(true);
@@ -104,6 +106,11 @@ export default function LogTimePage() {
   };
   
   const handleSaveLog = () => {
+    if (!user) {
+      toast({ title: "Not authenticated", description: "You must be logged in to save.", variant: "destructive" });
+      return;
+    }
+
     startTransition(async () => {
       const activitiesToSave = loggedActivities.filter(la => la.duration > 0);
       if(activitiesToSave.length === 0) {
@@ -118,12 +125,13 @@ export default function LogTimePage() {
       const result = await saveActivitiesToFirestore(activitiesToSave.map(la => ({
         name: la.activity.name,
         duration: la.duration,
+        userId: user.uid,
       })));
 
       if (result.success) {
         toast({
           title: "Log Saved!",
-          description: "Your activities have been saved to Firestore.",
+          description: "Your activities have been saved.",
         });
         // Reset durations after saving
         setLoggedActivities(prev => prev.map(la => ({...la, duration: 0})));
@@ -138,12 +146,17 @@ export default function LogTimePage() {
   };
 
   const handleSaveMood = (mood: { energy: number, focus: number, mood: number }) => {
+    if (!user) {
+      toast({ title: "Not authenticated", description: "You must be logged in to save.", variant: "destructive" });
+      return;
+    }
+
     startTransition(async () => {
-        const result = await saveMoodToFirestore(mood);
+        const result = await saveMoodToFirestore({ ...mood, userId: user.uid });
         if (result.success) {
             toast({
                 title: "Mood Saved!",
-                description: "Your mood has been logged to Firestore.",
+                description: "Your mood has been logged.",
             });
         } else {
             toast({

@@ -6,12 +6,14 @@ import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
 interface ActivityData {
   name: string;
   duration: number; // in minutes
+  userId: string;
 }
 
 interface MoodData {
   energy: number;
   focus: number;
   mood: number;
+  userId: string;
 }
 
 export async function saveActivitiesToFirestore(activities: ActivityData[]) {
@@ -22,7 +24,8 @@ export async function saveActivitiesToFirestore(activities: ActivityData[]) {
         durationMinutes: activity.duration,
         date: new Date().toISOString().split('T')[0], // YYYY-MM-DD
         entryType: 'Log',
-        timestamp: serverTimestamp()
+        timestamp: serverTimestamp(),
+        userId: activity.userId,
       });
     });
     await Promise.all(activityPromises);
@@ -40,6 +43,7 @@ export async function saveMoodToFirestore(moodData: MoodData) {
       energy: moodData.energy,
       focus: moodData.focus,
       mood: moodData.mood,
+      userId: moodData.userId,
     });
     return { success: true };
   } catch (error: any) {
