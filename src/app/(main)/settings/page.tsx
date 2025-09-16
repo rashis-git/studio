@@ -1,3 +1,4 @@
+
 'use client';
 
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -39,12 +40,12 @@ export default function SettingsPage() {
             </Avatar>
             <div className="flex-1 space-y-2">
               <Label htmlFor="name">Name</Label>
-              <Input id="name" defaultValue={user?.displayName ?? "Sample User"} />
+              <Input id="name" value={user?.displayName ?? "Sample User"} readOnly />
             </div>
           </div>
           <div className="space-y-2">
             <Label htmlFor="email">Email</Label>
-            <Input id="email" type="email" defaultValue={user?.email ?? "user@example.com"} readOnly />
+            <Input id="email" type="email" value={user?.email ?? ""} readOnly />
           </div>
         </CardContent>
       </Card>
