@@ -78,4 +78,6 @@ export async function createUserInFirestore(userId: string, email: string | null
     return { success: true };
   } catch (error: any) {
     console.error('Error creating user document in Firestore:', error.message);
-    return { success: false, error: error.message || 'Failed to create user
+    return { success: false, error: error.message || 'Failed to create user document.' };
+  }
+}
