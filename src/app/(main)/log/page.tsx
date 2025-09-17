@@ -10,7 +10,6 @@ import { LogTimeDialog } from '@/components/log-time-dialog';
 import { AddActivityDialog } from '@/components/add-activity-dialog';
 import { LogMoodDialog } from '@/components/log-mood-dialog';
 import { UnloggedTimeSuggestions } from '@/components/unlogged-time-suggestions';
-import { saveMoodToFirestore } from '@/app/actions/firestore';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/use-auth';
 import { db } from '@/lib/firebase';
@@ -166,19 +165,24 @@ export default function LogTimePage() {
     }
 
     startTransition(async () => {
-        const result = await saveMoodToFirestore({ ...mood, userId: user.uid });
-        if (result.success) {
-            toast({
-                title: "Mood Saved!",
-                description: "Your mood has been logged.",
-            });
-        } else {
-            toast({
-                title: "Error",
-                description: result.error,
-                variant: "destructive",
-            });
-        }
+      try {
+        await addDoc(collection(db, 'state-logs'), {
+          ...mood,
+          userId: user.uid,
+          checkInTime: serverTimestamp(),
+        });
+
+        toast({
+            title: "Mood Saved!",
+            description: "Your mood has been logged.",
+        });
+      } catch (error: any) {
+          toast({
+              title: "Error Saving Mood",
+              description: error.message || "An unknown error occurred.",
+              variant: "destructive",
+          });
+      }
     });
   };
 
