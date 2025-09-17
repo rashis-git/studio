@@ -13,21 +13,21 @@ import { UnloggedTimeSuggestions } from '@/components/unlogged-time-suggestions'
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/use-auth';
 import { db } from '@/lib/firebase';
-import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
+import { collection, addDoc, serverTimestamp, query, where, getDocs } from 'firebase/firestore';
+import type { User } from 'firebase/auth';
+import { useRouter } from 'next/navigation';
 
 type LoggedActivity = {
   activity: Activity;
   duration: number; // in minutes
 };
 
-type TempActivity = Omit<Activity, 'id'> & { id: string };
-
 const ActivityBubble = ({
   activity,
   duration,
   onClick,
 }: {
-  activity: Activity | TempActivity;
+  activity: Activity;
   duration: number;
   onClick: () => void;
 }) => {
@@ -65,20 +65,37 @@ export default function LogTimePage() {
   const [isPending, startTransition] = useTransition();
   const { toast } = useToast();
   const { user } = useAuth();
+  const router = useRouter();
+
+  const fetchActivitiesByIds = async (ids: string[]) => {
+    if (!user || ids.length === 0) {
+      setLoggedActivities([]);
+      return;
+    }
+    const q = query(collection(db, 'users', user.uid, 'savedActivities'), where('__name__', 'in', ids));
+    const querySnapshot = await getDocs(q);
+    const userActivities: Activity[] = querySnapshot.docs.map(doc => ({
+        id: doc.id,
+        name: doc.data().activityName,
+        icon: mockActivities.find(a => a.name === doc.data().activityName)?.icon || Sparkles
+    }));
+
+    const activitiesToLog = userActivities.map(activity => ({ activity, duration: 0 }));
+    setLoggedActivities(activitiesToLog);
+  }
 
   useEffect(() => {
     setIsClient(true);
-    try {
-      const storedIds = JSON.parse(localStorage.getItem('selectedActivities') || '[]');
-      const activitiesToLog = mockActivities
-        .filter((act) => storedIds.includes(act.id))
-        .map((activity) => ({ activity, duration: 0 }));
-      setLoggedActivities(activitiesToLog);
-    } catch (error) {
-      console.error("Failed to parse activities from localStorage", error);
-      setLoggedActivities([]);
+    if (user) {
+      try {
+        const storedIds = JSON.parse(localStorage.getItem('selectedActivities') || '[]');
+        fetchActivitiesByIds(storedIds);
+      } catch (error) {
+        console.error("Failed to parse activities from localStorage", error);
+        setLoggedActivities([]);
+      }
     }
-  }, []);
+  }, [user]);
 
   const handleUpdateDuration = (duration: number) => {
     if (selectedActivity) {
@@ -90,16 +107,10 @@ export default function LogTimePage() {
     }
   };
 
-  const handleAddActivity = (name: string) => {
-    const newActivity: LoggedActivity = {
-      activity: {
-        id: `custom-${Date.now()}`,
-        name,
-        icon: Sparkles, // Default icon for custom activities
-      },
-      duration: 0,
-    };
-    setLoggedActivities((prev) => [...prev, newActivity]);
+  const handleAddActivity = () => {
+    // This function will now just refresh the page to get the latest activities
+    // after a new one is added via the dialog.
+    router.push('/');
   };
 
   const openLogTimeDialog = (loggedActivity: LoggedActivity) => {
@@ -147,6 +158,7 @@ export default function LogTimePage() {
         });
         // Reset durations after saving
         setLoggedActivities(prev => prev.map(la => ({...la, duration: 0})));
+        localStorage.removeItem('selectedActivities');
 
       } catch (error: any) {
         toast({
@@ -188,14 +200,10 @@ export default function LogTimePage() {
 
   if (!isClient) {
     return (
-      <div className="p-4 space-y-4">
+      <div className="p-4 pt-8 space-y-4">
         {[...Array(3)].map((_, i) => (
-          <div key={i} className="flex items-center space-x-4">
-            <div className="w-16 h-16 rounded-full bg-muted animate-pulse" />
-            <div className="flex-1 space-y-2">
-              <div className="h-4 rounded bg-muted animate-pulse" />
-              <div className="w-3/4 h-4 rounded bg-muted animate-pulse" />
-            </div>
+          <div key={i} className="flex items-center justify-center gap-4 p-4 min-h-[40vh] bg-muted/30 rounded-xl">
+             <Loader2 className="w-8 h-8 animate-spin text-primary" />
           </div>
         ))}
       </div>
@@ -255,7 +263,7 @@ export default function LogTimePage() {
       <AddActivityDialog
         open={isAddDialogOpen}
         onOpenChange={setIsAddDialogOpen}
-        onAddActivity={handleAddActivity}
+        onActivityAdded={handleAddActivity}
         user={user}
       />
       
@@ -278,3 +286,5 @@ export default function LogTimePage() {
     </div>
   );
 }
+
+    

@@ -10,7 +10,7 @@ import { collection, query, getDocs } from 'firebase/firestore';
 import type { Activity } from '@/lib/types';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { X, Check, RotateCcw, ArrowRight, Loader2, BrainCircuit, Activity as ActivityIcon, PlusCircle, Plus } from 'lucide-react';
+import { X, Check, RotateCcw, ArrowRight, Loader2, BrainCircuit, Activity as ActivityIcon, PlusCircle, Plus, Sprout, Dumbbell, Footprints, Phone, BookOpen, Coffee, Briefcase } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import { useSound } from '@/hooks/use-sound';
 import { AddActivityDialog } from '@/components/add-activity-dialog';
@@ -38,14 +38,19 @@ const cardVariants = {
   }),
 };
 
+const iconMap: { [key: string]: LucideIcon } = {
+    'Deep Work': BrainCircuit,
+    'Shallow Work': Briefcase,
+    'Exercise': Dumbbell,
+    'Take a Walk': Footprints,
+    'Talk to Family/Friends': Phone,
+    'Read a Book': BookOpen,
+    'Relax / Break': Coffee,
+    'Gardening': Sprout,
+};
+
 const getIconForActivity = (activityName: string): LucideIcon => {
-  switch (activityName.toLowerCase()) {
-    case 'deep work':
-      return BrainCircuit;
-    // Add more cases here for other activities
-    default:
-      return ActivityIcon;
-  }
+  return iconMap[activityName] || ActivityIcon;
 };
 
 
@@ -61,7 +66,7 @@ export default function ActivitySwipePage() {
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
 
   const fetchActivities = async () => {
-    if (!user || typeof user.uid !== 'string' || user.uid.length === 0) {
+    if (!user) {
       setIsLoading(false);
       return;
     }
@@ -81,7 +86,7 @@ export default function ActivitySwipePage() {
           icon: getIconForActivity(data.activityName),
         });
       });
-      setActivities(userActivities);
+      setActivities(userActivities.reverse()); // Show newest first
       setInitialActivities(userActivities);
     } catch (error) {
       console.error("Firebase error while fetching activities:", error);
@@ -93,6 +98,8 @@ export default function ActivitySwipePage() {
   useEffect(() => {
     if(user) {
       fetchActivities();
+    } else {
+        setIsLoading(false)
     }
   }, [user]);
 
@@ -116,11 +123,12 @@ export default function ActivitySwipePage() {
   };
 
   const handleReset = () => {
-    setActivities(initialActivities);
+    setActivities([...initialActivities].reverse());
     setSelectedActivities([]);
   };
   
   const handleActivityAdded = () => {
+    // Refetch activities to get the new one
     fetchActivities();
   }
 
@@ -225,9 +233,11 @@ export default function ActivitySwipePage() {
       <AddActivityDialog
         open={isAddDialogOpen}
         onOpenChange={setIsAddDialogOpen}
-        onAddActivity={handleActivityAdded}
+        onActivityAdded={handleActivityAdded}
         user={user}
       />
     </div>
   );
 }
+
+    

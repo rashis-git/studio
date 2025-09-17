@@ -14,11 +14,11 @@ import type { User } from 'firebase/auth';
 interface AddActivityDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onAddActivity: (name: string) => void;
+  onActivityAdded: () => void;
   user: User | null;
 }
 
-export function AddActivityDialog({ open, onOpenChange, onAddActivity, user }: AddActivityDialogProps) {
+export function AddActivityDialog({ open, onOpenChange, onActivityAdded, user }: AddActivityDialogProps) {
   const [name, setName] = useState('');
   const { toast } = useToast();
 
@@ -55,7 +55,7 @@ export function AddActivityDialog({ open, onOpenChange, onAddActivity, user }: A
     }
     
     // Notify the parent component that an activity was added.
-    onAddActivity(name.trim());
+    onActivityAdded();
     
     // Reset and close
     setName('');
@@ -68,7 +68,7 @@ export function AddActivityDialog({ open, onOpenChange, onAddActivity, user }: A
         <DialogHeader>
           <DialogTitle>Add New Activity</DialogTitle>
           <DialogDescription>
-            Add a custom activity to track. It will be saved permanently.
+            Add a custom activity to track. It will be saved permanently for you to select from on the 'Today' screen.
           </DialogDescription>
         </DialogHeader>
         <div className="grid gap-4 py-4">
@@ -93,3 +93,5 @@ export function AddActivityDialog({ open, onOpenChange, onAddActivity, user }: A
     </Dialog>
   );
 }
+
+    
