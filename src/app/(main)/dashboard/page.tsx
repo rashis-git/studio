@@ -4,12 +4,13 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useAuth } from '@/hooks/use-auth';
 import { db } from '@/lib/firebase';
-import { collection, query, where, getDocs, Timestamp } from 'firebase/firestore';
+import { collection, query, where, getDocs } from 'firebase/firestore';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { Loader2, BarChart3, AlertCircle } from 'lucide-react';
-import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts';
+import { Progress } from '@/components/ui/progress';
+import { Loader2, AlertCircle, BarChart3 } from 'lucide-react';
 import { mockActivities } from '@/lib/data';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import type { LucideIcon } from 'lucide-react';
 
 interface ActivityLog {
   activityName: string;
@@ -20,13 +21,23 @@ interface ActivityLog {
 interface AggregatedActivity {
   name: string;
   totalMinutes: number;
+  icon: LucideIcon;
+  percentage: number;
 }
 
-// Helper to find the icon for a given activity name
-const getActivityIcon = (name: string) => {
+const getActivityIcon = (name: string): LucideIcon => {
     const activity = mockActivities.find(a => a.name === name);
     return activity ? activity.icon : BarChart3;
 };
+
+const formatTime = (minutes: number) => {
+    const hours = Math.floor(minutes / 60);
+    const mins = minutes % 60;
+    if (hours > 0) {
+        return `${hours}h ${mins}m`;
+    }
+    return `${mins}m`;
+}
 
 export default function DashboardPage() {
   const { user } = useAuth();
@@ -67,16 +78,19 @@ export default function DashboardPage() {
         }
 
         const activityMap = new Map<string, number>();
-
         logs.forEach(log => {
           const currentDuration = activityMap.get(log.activityName) || 0;
           activityMap.set(log.activityName, currentDuration + log.durationMinutes);
         });
         
+        const totalMinutesAllActivities = Array.from(activityMap.values()).reduce((acc, curr) => acc + curr, 0);
+        
         const aggregated = Array.from(activityMap.entries()).map(([name, totalMinutes]) => ({
           name,
           totalMinutes,
-        }));
+          icon: getActivityIcon(name),
+          percentage: totalMinutesAllActivities > 0 ? (totalMinutes / totalMinutesAllActivities) * 100 : 0,
+        })).sort((a, b) => b.totalMinutes - a.totalMinutes); // Sort by most time spent
 
         setAggregatedData(aggregated);
 
@@ -90,38 +104,6 @@ export default function DashboardPage() {
 
     fetchData();
   }, [user]);
-
-  const chartData = useMemo(() => {
-    return aggregatedData.map(item => ({
-        name: item.name,
-        Time: item.totalMinutes,
-    }));
-  }, [aggregatedData]);
-
-  const CustomYAxisTick = ({ y, payload }: any) => {
-    const Icon = getActivityIcon(payload.value);
-    return (
-        <g transform={`translate(${y - 30}, ${payload.y})`}>
-            <Icon className="w-5 h-5 text-muted-foreground" />
-        </g>
-    );
-  };
-
-  const CustomTooltip = ({ active, payload, label }: any) => {
-    if (active && payload && payload.length) {
-      const hours = Math.floor(payload[0].value / 60);
-      const minutes = payload[0].value % 60;
-      const timeString = `${hours > 0 ? `${hours}h ` : ''}${minutes}m`;
-
-      return (
-        <div className="p-2 text-sm bg-background border rounded-lg shadow-lg">
-          <p className="font-bold">{label}</p>
-          <p className="text-primary">{`Time: ${timeString}`}</p>
-        </div>
-      );
-    }
-    return null;
-  };
 
   if (isLoading) {
     return (
@@ -144,50 +126,45 @@ export default function DashboardPage() {
   }
 
   return (
-    <div className="p-4 pt-8 space-y-8">
+    <div className="p-4 pt-8 space-y-6">
       <header className="text-center">
         <h1 className="text-3xl font-bold font-headline">Your Day's Dashboard</h1>
-        <p className="text-muted-foreground">A summary of your activities today.</p>
+        <p className="text-muted-foreground">A summary of your activities logged today.</p>
       </header>
       
-      <Card>
-        <CardHeader>
-          <CardTitle>Activity Breakdown</CardTitle>
-          <CardDescription>Total time spent on each activity today.</CardDescription>
-        </CardHeader>
-        <CardContent>
-            {aggregatedData.length > 0 ? (
-                <div className="w-full h-[50vh]">
-                    <ResponsiveContainer width="100%" height="100%">
-                        <BarChart
-                            layout="vertical"
-                            data={chartData}
-                            margin={{ top: 5, right: 20, left: 30, bottom: 5 }}
-                        >
-                            <CartesianGrid strokeDasharray="3 3" horizontal={false} />
-                            <XAxis type="number" unit="m" />
-                            <YAxis 
-                                dataKey="name" 
-                                type="category" 
-                                tickLine={false} 
-                                axisLine={false}
-                                tick={<CustomYAxisTick />}
-                                width={10}
-                            />
-                            <Tooltip content={<CustomTooltip />} cursor={{ fill: 'hsl(var(--muted))' }} />
-                            <Bar dataKey="Time" fill="hsl(var(--primary))" radius={[0, 4, 4, 0]} barSize={25} />
-                        </BarChart>
-                    </ResponsiveContainer>
-                </div>
-            ) : (
+      {aggregatedData.length > 0 ? (
+        <div className="space-y-4">
+            {aggregatedData.map((activity, index) => {
+                const Icon = activity.icon;
+                return (
+                    <Card key={index} className="overflow-hidden">
+                        <CardContent className="p-4">
+                            <div className="flex items-center justify-between gap-4">
+                                <div className="flex items-center gap-4">
+                                    <Icon className="w-8 h-8 text-primary" />
+                                    <span className="font-semibold">{activity.name}</span>
+                                </div>
+                                <span className="font-bold font-headline text-lg">
+                                    {formatTime(activity.totalMinutes)}
+                                </span>
+                            </div>
+                            <Progress value={activity.percentage} className="mt-3 h-2" />
+                        </CardContent>
+                    </Card>
+                );
+            })}
+        </div>
+      ) : (
+        <Card>
+            <CardContent className="p-6">
                 <div className="flex flex-col items-center justify-center h-48 text-center bg-muted/50 rounded-lg">
                     <BarChart3 className="w-12 h-12 mb-4 text-muted-foreground" />
                     <p className="font-semibold">No activities logged today.</p>
                     <p className="text-sm text-muted-foreground">Go to the 'Log' page to add your activities.</p>
                 </div>
-            )}
-        </CardContent>
-      </Card>
+            </CardContent>
+        </Card>
+      )}
     </div>
   );
 }
