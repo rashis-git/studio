@@ -13,7 +13,7 @@ import { UnloggedTimeSuggestions } from '@/components/unlogged-time-suggestions'
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/use-auth';
 import { db } from '@/lib/firebase';
-import { collection, addDoc, serverTimestamp, query, where, getDocs } from 'firebase/firestore';
+import { collection, addDoc, serverTimestamp, query, where, getDocs, writeBatch } from 'firebase/firestore';
 import type { User } from 'firebase/auth';
 import { useRouter } from 'next/navigation';
 
@@ -89,7 +89,11 @@ export default function LogTimePage() {
     if (user) {
       try {
         const storedIds = JSON.parse(localStorage.getItem('selectedActivities') || '[]');
-        fetchActivitiesByIds(storedIds);
+        if (storedIds.length > 0) {
+          fetchActivitiesByIds(storedIds);
+        } else {
+            setLoggedActivities([]);
+        }
       } catch (error) {
         console.error("Failed to parse activities from localStorage", error);
         setLoggedActivities([]);
@@ -108,8 +112,6 @@ export default function LogTimePage() {
   };
 
   const handleAddActivity = () => {
-    // This function will now just refresh the page to get the latest activities
-    // after a new one is added via the dialog.
     router.push('/');
   };
 
@@ -126,14 +128,22 @@ export default function LogTimePage() {
 
     const activitiesToSave = loggedActivities
       .filter(la => la.duration > 0)
-      .map(la => ({
-        activityName: la.activity.name,
-        durationMinutes: la.duration,
-        date: new Date().toISOString().split('T')[0],
-        entryType: 'Log',
-        timestamp: serverTimestamp(),
-        userId: user.uid,
-      }));
+      .map(la => {
+        const today = new Date();
+        const year = today.getFullYear();
+        const month = String(today.getMonth() + 1).padStart(2, '0');
+        const day = String(today.getDate()).padStart(2, '0');
+        const todayStr = `${year}-${month}-${day}`;
+
+        return {
+          activityName: la.activity.name,
+          durationMinutes: la.duration,
+          date: todayStr,
+          entryType: 'Log',
+          timestamp: serverTimestamp(),
+          userId: user.uid,
+        }
+      });
       
     if(activitiesToSave.length === 0) {
       toast({
@@ -146,17 +156,20 @@ export default function LogTimePage() {
     
     startTransition(async () => {
       try {
-        const activityPromises = activitiesToSave.map(activity => {
-          return addDoc(collection(db, 'activity-logs'), activity);
+        const batch = writeBatch(db);
+        activitiesToSave.forEach(activity => {
+          const docRef = addDoc(collection(db, 'activity-logs'), activity)._key.path.segments;
+          const newDocRef = collection(db, 'activity-logs').doc();
+          batch.set(newDocRef, activity);
         });
 
-        await Promise.all(activityPromises);
+        await batch.commit();
         
         toast({
           title: "Log Saved!",
           description: "Your activities have been saved.",
         });
-        // Reset durations after saving
+        
         setLoggedActivities(prev => prev.map(la => ({...la, duration: 0})));
         localStorage.removeItem('selectedActivities');
 
@@ -201,11 +214,9 @@ export default function LogTimePage() {
   if (!isClient) {
     return (
       <div className="p-4 pt-8 space-y-4">
-        {[...Array(3)].map((_, i) => (
-          <div key={i} className="flex items-center justify-center gap-4 p-4 min-h-[40vh] bg-muted/30 rounded-xl">
-             <Loader2 className="w-8 h-8 animate-spin text-primary" />
-          </div>
-        ))}
+        <div className="flex items-center justify-center gap-4 p-4 min-h-[40vh] bg-muted/30 rounded-xl">
+            <Loader2 className="w-8 h-8 animate-spin text-primary" />
+        </div>
       </div>
     );
   }
@@ -254,7 +265,7 @@ export default function LogTimePage() {
       </div>
 
       <div className="py-8 mt-4 text-center">
-        <Button size="lg" onClick={handleSaveLog} disabled={isPending}>
+        <Button size="lg" onClick={handleSaveLog} disabled={isPending || loggedActivities.filter(l => l.duration > 0).length === 0}>
           {isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
           Save Day's Log
         </Button>
@@ -286,5 +297,3 @@ export default function LogTimePage() {
     </div>
   );
 }
-
-    
