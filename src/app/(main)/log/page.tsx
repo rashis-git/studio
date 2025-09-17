@@ -7,7 +7,7 @@ import type { Activity } from '@/lib/types';
 import { Button } from '@/components/ui/button';
 import { PlusCircle, Sparkles, Loader2, Smile } from 'lucide-react';
 import { LogTimeDialog } from '@/components/log-time-dialog';
-import { AddActivityDialog } from '@/components/add-activity-dialog';
+import { AddActivityToLogDialog } from '@/components/add-activity-to-log-dialog';
 import { LogMoodDialog } from '@/components/log-mood-dialog';
 import { UnloggedTimeSuggestions } from '@/components/unlogged-time-suggestions';
 import { useToast } from '@/hooks/use-toast';
@@ -110,11 +110,17 @@ export default function LogTimePage() {
       );
     }
   };
+  
+  const handleActivityAdded = (activityName: string) => {
+    const newActivity: Activity = {
+      id: `temp-${Date.now()}`, // Temporary unique ID for the session
+      name: activityName,
+      icon: Sparkles, // Default icon for temporary activities
+    };
 
-  const handleActivityAdded = () => {
-    // Navigate to the 'Today' page to re-select activities including the new one.
-    router.push('/');
+    setLoggedActivities(prev => [...prev, { activity: newActivity, duration: 0 }]);
   };
+
 
   const openLogTimeDialog = (loggedActivity: LoggedActivity) => {
     setSelectedActivity(loggedActivity);
@@ -170,8 +176,8 @@ export default function LogTimePage() {
           description: "Your activities have been saved.",
         });
         
+        // Reset durations but keep activities
         setLoggedActivities(prev => prev.map(la => ({...la, duration: 0})));
-        localStorage.removeItem('selectedActivities');
 
       } catch (error: any) {
         console.error("Error saving log:", error);
@@ -272,7 +278,7 @@ export default function LogTimePage() {
         </Button>
       </div>
 
-      <AddActivityDialog
+      <AddActivityToLogDialog
         open={isAddDialogOpen}
         onOpenChange={setIsAddDialogOpen}
         onActivityAdded={handleActivityAdded}
