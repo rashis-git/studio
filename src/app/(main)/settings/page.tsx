@@ -49,6 +49,13 @@ export default function SettingsPage() {
         const docSnap = await getDoc(docRef);
         if (docSnap.exists()) {
           setNotificationTimes(docSnap.data().times || []);
+        } else {
+          // If the document doesn't exist, create it. This can happen on first load.
+          try {
+            await setDoc(docRef, { userId: user.uid, times: [] });
+          } catch (e) {
+            console.error("Could not create notification preferences doc:", e);
+          }
         }
       }
     };
@@ -63,6 +70,8 @@ export default function SettingsPage() {
   
   const handleNotificationToggle = (enabled: boolean) => {
     setIsNotificationsEnabled(enabled);
+    localStorage.setItem('notifications-enabled', String(enabled));
+
     if (enabled && Notification.permission === 'default') {
       Notification.requestPermission().then(permission => {
         if (permission === 'granted') {
@@ -70,6 +79,7 @@ export default function SettingsPage() {
         } else {
           toast({ title: "Notifications Blocked", description: "You can enable notifications in your browser settings.", variant: "destructive"});
           setIsNotificationsEnabled(false); // Revert toggle if permission is denied
+          localStorage.setItem('notifications-enabled', 'false');
         }
       });
     }
@@ -100,7 +110,6 @@ export default function SettingsPage() {
     try {
         const docRef = doc(db, 'notification-preferences', user.uid);
         await setDoc(docRef, { userId: user.uid, times: notificationTimes });
-        localStorage.setItem('notifications-enabled', String(isNotificationsEnabled));
         
         toast({ title: "Preferences Saved!", description: "Your notification settings have been updated."});
     } catch(e: any) {
