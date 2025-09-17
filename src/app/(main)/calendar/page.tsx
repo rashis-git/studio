@@ -75,7 +75,8 @@ export default function CalendarPage() {
             collection(db, "planned-activities"),
             where("userId", "==", user.uid),
             where("date", ">=", monthStart),
-            where("date", "<=", monthEnd)
+            where("date", "<=", monthEnd),
+            orderBy("date")
         );
 
         const querySnapshot = await getDocs(q);
@@ -277,5 +278,3 @@ export default function CalendarPage() {
     </div>
   );
 }
-
-    
