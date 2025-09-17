@@ -15,9 +15,8 @@ import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Check } from 'lucide-react';
 
 const themes = [
-  { name: 'Indigo', value: 'theme-indigo' },
-  { name: 'Sunset', value: 'theme-sunset' },
   { name: 'Forest', value: 'theme-forest' },
+  { name: 'Sunset', value: 'theme-sunset' },
   { name: 'Midnight', value: 'theme-midnight' },
 ];
 
@@ -79,12 +78,12 @@ export default function SettingsPage() {
           <CardDescription>Personalize the look and feel of the app.</CardDescription>
         </CardHeader>
         <CardContent>
-          <RadioGroup value={currentTheme} onValueChange={handleThemeChange} className="grid grid-cols-2 gap-4">
+          <RadioGroup value={currentTheme} onValueChange={handleThemeChange} className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             {themes.map((theme) => (
               <Label
                 key={theme.value}
                 htmlFor={theme.value}
-                className="flex flex-col items-center justify-center p-4 border rounded-lg cursor-pointer hover:bg-accent hover:text-accent-foreground data-[state=checked]:border-primary data-[state=checked]:ring-2 data-[state=checked]:ring-primary"
+                className="flex flex-col items-center justify-center p-4 border rounded-lg cursor-pointer hover:bg-accent hover:text-accent-foreground data-[state=checked]:border-primary data-[state=checked]:ring-2 data-[state=checked]:ring-primary relative"
               >
                 <RadioGroupItem value={theme.value} id={theme.value} className="sr-only" />
                 <div className="flex items-center justify-center w-full gap-2">

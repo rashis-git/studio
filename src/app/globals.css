@@ -32,72 +32,72 @@
     --radius: 0.5rem;
   }
   
-  .theme-sunset {
-    --background: 20 14% 4%; /* Almost black */
-    --foreground: 20 5% 94%;
-    --card: 24 10% 9%;
-    --card-foreground: 20 5% 94%;
-    --popover: 24 10% 9%;
-    --popover-foreground: 20 5% 94%;
-    --primary: 350 89% 60%; /* Fiery Red */
+  .theme-forest {
+    --background: 48 25% 97%; /* Alabaster #F8F7F2 */
+    --foreground: 170 9% 22%; /* Dark Slate Gray #343E3D */
+    --card: 48 25% 99%;
+    --card-foreground: 170 9% 22%;
+    --popover: 48 25% 97%;
+    --popover-foreground: 170 9% 22%;
+    --primary: 184 34% 28%; /* Deep Teal #2F5D62 */
     --primary-foreground: 0 0% 100%;
-    --secondary: 25 80% 55%; /* Warm Orange */
-    --secondary-foreground: 24 10% 9%;
-    --muted: 25 80% 55%;
-    --muted-foreground: 20 5% 64%;
-    --accent: 50 95% 55%; /* Bright Yellow */
-    --accent-foreground: 24 10% 9%;
-    --destructive: 0 84% 60%;
+    --secondary: 26 33% 50%; /* Earthy Brown #A77B5A */
+    --secondary-foreground: 0 0% 100%;
+    --muted: 48 25% 94%;
+    --muted-foreground: 170 9% 42%;
+    --accent: 124 20% 46%; /* Crisp Green #5E8C61 */
+    --accent-foreground: 0 0% 100%;
+    --destructive: 0 72% 51%;
     --destructive-foreground: 0 0% 100%;
-    --border: 24 10% 15%;
-    --input: 24 10% 15%;
-    --ring: 350 89% 60%;
+    --border: 48 25% 90%;
+    --input: 48 25% 90%;
+    --ring: 184 34% 28%;
     --radius: 0.5rem;
   }
 
-  .theme-forest {
-    --background: 120 25% 97%; /* Light, earthy green */
-    --foreground: 120 15% 20%;
-    --card: 120 25% 100%;
-    --card-foreground: 120 15% 20%;
-    --popover: 120 25% 100%;
-    --popover-foreground: 120 15% 20%;
-    --primary: 140 45% 45%; /* Deep Forest Green */
+  .theme-sunset {
+    --background: 19 100% 95%; /* Peach Puff #FFF0E9 */
+    --foreground: 308 11% 26%; /* Dark Purple #4C3A4A */
+    --card: 19 100% 97%;
+    --card-foreground: 308 11% 26%;
+    --popover: 19 100% 95%;
+    --popover-foreground: 308 11% 26%;
+    --primary: 20 100% 63%; /* Tangerine #FF8C42 */
     --primary-foreground: 0 0% 100%;
-    --secondary: 90 30% 88%; /* Soft Lime */
-    --secondary-foreground: 120 15% 20%;
-    --muted: 90 30% 88%;
-    --muted-foreground: 120 10% 45%;
-    --accent: 40 60% 65%; /* Muted Gold */
-    --accent-foreground: 120 15% 20%;
-    --destructive: 0 72% 51%;
+    --secondary: 7 100% 82%; /* Warm Pink #FFA69E */
+    --secondary-foreground: 308 11% 26%;
+    --muted: 19 100% 92%;
+    --muted-foreground: 308 11% 46%;
+    --accent: 49 100% 50%; /* Bright Yellow #FFD000 */
+    --accent-foreground: 308 11% 26%;
+    --destructive: 0 84% 60%;
     --destructive-foreground: 0 0% 100%;
-    --border: 120 20% 89%;
-    --input: 120 20% 89%;
-    --ring: 140 45% 45%;
+    --border: 19 100% 90%;
+    --input: 19 100% 90%;
+    --ring: 20 100% 63%;
     --radius: 0.5rem;
   }
 
   .theme-midnight {
-    --background: 222 47% 11%;
-    --foreground: 0 0% 98%;
-    --card: 222 47% 15%;
-    --card-foreground: 0 0% 98%;
-    --popover: 222 47% 11%;
-    --popover-foreground: 0 0% 98%;
-    --primary: 210 90% 60%; /* Bright Blue */
-    --primary-foreground: 222 47% 11%;
-    --secondary: 217 33% 20%;
-    --secondary-foreground: 0 0% 98%;
-    --muted: 217 33% 20%;
-    --muted-foreground: 215 20% 65%;
-    --accent: 270 90% 70%; /* Electric Purple */
-    --accent-foreground: 0 0% 98%;
+    --background: 244 23% 12%; /* Dark Purple #191825 */
+    --foreground: 250 33% 93%; /* Light Lavender #E0DDF0 */
+    --card: 244 23% 15%;
+    --card-foreground: 250 33% 93%;
+    --popover: 244 23% 12%;
+    --popover-foreground: 250 33% 93%;
+    --primary: 247 28% 50%; /* Muted Purple #6759A6 */
+    --primary-foreground: 0 0% 100%;
+    --secondary: 240 2% 20%; /* Dark Gray #2B2A39 */
+    --secondary-foreground: 250 33% 93%;
+    --muted: 240 2% 23%;
+    --muted-foreground: 250 33% 73%;
+    --accent: 165 67% 68%; /* Bright Mint #86E3CE */
+    --accent-foreground: 244 23% 12%;
     --destructive: 0 63% 45%;
     --destructive-foreground: 0 0% 98%;
-    --border: 217 33% 25%;
-    --input: 217 33% 25%;
-    --ring: 210 90% 60%;
+    --border: 240 2% 25%;
+    --input: 240 2% 25%;
+    --ring: 247 28% 50%;
     --radius: 0.5rem;
   }
 
