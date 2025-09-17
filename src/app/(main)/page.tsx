@@ -124,9 +124,17 @@ export default function ActivitySwipePage() {
 
   return (
     <div className="flex flex-col items-center justify-center h-full p-4 pt-8 overflow-hidden">
-      <header className="w-full mb-8 text-center">
+      <header className="relative w-full mb-8 text-center">
         <h1 className="text-3xl font-bold font-headline">What have you been up to?</h1>
         <p className="text-muted-foreground">Swipe right for done, left for skip.</p>
+        <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => setIsAddDialogOpen(true)}
+            className="absolute top-0 right-0"
+        >
+            <PlusCircle className="mr-2" /> Add New
+        </Button>
       </header>
 
       <div className="relative flex items-center justify-center w-full h-[60dvh] max-h-[450px]">
@@ -164,7 +172,7 @@ export default function ActivitySwipePage() {
                      <Check className="w-24 h-24 text-green-500" />
                     <h2 className="text-2xl font-semibold text-center font-headline">All done!</h2>
                     <p className="text-center text-muted-foreground">
-                        {selectedActivities.length > 0 ? "You've reviewed all activities." : "Add some activities to get started."}
+                        {initialActivities.length > 0 ? "You've reviewed all activities." : "Add some activities to get started."}
                     </p>
                     
                     <div className="w-full mt-4 space-y-2">
@@ -173,10 +181,6 @@ export default function ActivitySwipePage() {
                                 Log Time <ArrowRight className="ml-2"/>
                             </Button>
                         )}
-
-                        <Button onClick={() => setIsAddDialogOpen(true)} className="w-full" size="lg" variant={selectedActivities.length > 0 ? "outline" : "default"}>
-                            <PlusCircle className="mr-2" /> Add Activity
-                        </Button>
                         
                         {initialActivities.length > 0 && (
                              <Button onClick={handleReset} variant="ghost" size="sm" className="w-full">
