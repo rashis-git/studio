@@ -91,7 +91,9 @@ export default function ActivitySwipePage() {
   };
 
   useEffect(() => {
-    fetchActivities();
+    if(user) {
+      fetchActivities();
+    }
   }, [user]);
 
   const activeActivity = useMemo(() => activities[activities.length - 1], [activities]);
@@ -124,17 +126,21 @@ export default function ActivitySwipePage() {
 
   return (
     <div className="flex flex-col items-center justify-center h-full p-4 pt-8 overflow-hidden">
-      <header className="relative w-full mb-8 text-center">
-        <h1 className="text-3xl font-bold font-headline">What have you been up to?</h1>
-        <p className="text-muted-foreground">Swipe right for done, left for skip.</p>
-        <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => setIsAddDialogOpen(true)}
-            className="absolute top-0 right-0"
-        >
-            <PlusCircle className="mr-2" /> Add New
-        </Button>
+      <header className="w-full mb-8">
+        <div className="relative flex items-start justify-between">
+            <div className="flex-1 text-center">
+                <h1 className="text-3xl font-bold font-headline">What have you been up to?</h1>
+                <p className="text-muted-foreground">Swipe right for done, left for skip.</p>
+            </div>
+            <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setIsAddDialogOpen(true)}
+                className="shrink-0"
+            >
+                <PlusCircle className="mr-2" /> Add
+            </Button>
+        </div>
       </header>
 
       <div className="relative flex items-center justify-center w-full h-[60dvh] max-h-[450px]">
