@@ -59,7 +59,10 @@ export default function ActivitySwipePage() {
   const { playSound } = useSound();
 
   useEffect(() => {
-    if (!user) return;
+    if (!user) {
+      setIsLoading(false);
+      return;
+    }
 
     const fetchActivities = async () => {
       setIsLoading(true);
@@ -156,8 +159,8 @@ export default function ActivitySwipePage() {
                     <p className="text-center text-muted-foreground">
                     {initialActivities.length > 0 ? "You've reviewed all activities. Ready to log your time?" : "You don't have any saved activities yet."}
                     </p>
-                    <Button onClick={handleDone} className="w-full mt-4" size="lg" disabled={initialActivities.length === 0}>
-                    Log Time <ArrowRight className="ml-2"/>
+                    <Button onClick={handleDone} className="w-full mt-4" size="lg" disabled={selectedActivities.length === 0 && initialActivities.length > 0}>
+                        Log Time <ArrowRight className="ml-2"/>
                     </Button>
                     <Button onClick={handleReset} variant="ghost" size="sm" className="mt-2">
                     <RotateCcw className="mr-2" />
