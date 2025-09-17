@@ -59,12 +59,13 @@ export default function ActivitySwipePage() {
   const { playSound } = useSound();
 
   useEffect(() => {
-    if (!user) {
-      setIsLoading(false);
-      return;
-    }
-
     const fetchActivities = async () => {
+      // Robust check: Ensure we have a user with a valid UID before proceeding.
+      if (!user || typeof user.uid !== 'string' || user.uid.length === 0) {
+        setIsLoading(false); // Stop loading if user is not fully authenticated
+        return;
+      }
+
       setIsLoading(true);
       try {
         const q = query(collection(db, "savedActivities"), where("userId", "==", user.uid));
@@ -82,7 +83,7 @@ export default function ActivitySwipePage() {
         setInitialActivities(userActivities);
       } catch (error) {
         console.error("Error fetching user activities:", error);
-        // Optionally, set an error state and display a message to the user
+        // Set an error state here if you have one, or just log it.
       } finally {
         setIsLoading(false);
       }
