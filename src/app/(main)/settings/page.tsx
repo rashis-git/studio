@@ -5,14 +5,16 @@ import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Input } from "@/components/ui/input";
 import { useAuth } from "@/hooks/use-auth";
 import { useRouter } from "next/navigation";
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
-import { Check } from 'lucide-react';
+import { Check, X, PlusCircle, Loader2 } from 'lucide-react';
+import { db } from '@/lib/firebase';
+import { doc, getDoc, setDoc } from 'firebase/firestore';
+import { useToast } from '@/hooks/use-toast';
 
 const themes = [
   { name: 'Forest', value: 'theme-forest' },
@@ -24,12 +26,34 @@ export default function SettingsPage() {
   const { user, logout } = useAuth();
   const router = useRouter();
   const [currentTheme, setCurrentTheme] = useState('theme-forest');
+  const [notificationTimes, setNotificationTimes] = useState<string[]>([]);
+  const [newTime, setNewTime] = useState('09:00');
+  const [isLoading, setIsLoading] = useState(false);
+  const [isNotificationsEnabled, setIsNotificationsEnabled] = useState(false);
+  const { toast } = useToast();
 
   useEffect(() => {
+    // Theme
     const savedTheme = localStorage.getItem('dayflow-theme') || 'theme-forest';
     setCurrentTheme(savedTheme);
     document.documentElement.className = savedTheme;
-  }, []);
+
+    // Notifications
+    const enabled = localStorage.getItem('notifications-enabled') === 'true';
+    setIsNotificationsEnabled(enabled);
+
+    // Fetch notification times from Firestore
+    const fetchTimes = async () => {
+      if (user) {
+        const docRef = doc(db, 'notification-preferences', user.uid);
+        const docSnap = await getDoc(docRef);
+        if (docSnap.exists()) {
+          setNotificationTimes(docSnap.data().times || []);
+        }
+      }
+    };
+    fetchTimes();
+  }, [user]);
 
   const handleThemeChange = (theme: string) => {
     setCurrentTheme(theme);
@@ -40,6 +64,42 @@ export default function SettingsPage() {
   const handleLogout = async () => {
     await logout();
     router.push('/login');
+  };
+
+  const handleAddTime = () => {
+    if (newTime && !notificationTimes.includes(newTime)) {
+      const updatedTimes = [...notificationTimes, newTime].sort();
+      setNotificationTimes(updatedTimes);
+    }
+  };
+
+  const handleRemoveTime = (timeToRemove: string) => {
+    setNotificationTimes(notificationTimes.filter(time => time !== timeToRemove));
+  };
+  
+  const handleSaveNotificationPrefs = async () => {
+    if (!user) {
+        toast({ title: "Error", description: "You must be logged in.", variant: "destructive"});
+        return;
+    }
+    setIsLoading(true);
+    try {
+        const docRef = doc(db, 'notification-preferences', user.uid);
+        await setDoc(docRef, { userId: user.uid, times: notificationTimes });
+        localStorage.setItem('notifications-enabled', String(isNotificationsEnabled));
+
+        // This is a simple way to ask for permission if it's enabled.
+        // The actual scheduling is handled by the useNotification hook.
+        if (isNotificationsEnabled && Notification.permission === "default") {
+             Notification.requestPermission();
+        }
+
+        toast({ title: "Preferences Saved!", description: "Your notification settings have been updated."});
+    } catch(e: any) {
+        toast({ title: "Error", description: e.message || "Failed to save preferences.", variant: "destructive"});
+    } finally {
+        setIsLoading(false);
+    }
   };
 
   return (
@@ -102,35 +162,48 @@ export default function SettingsPage() {
       <Card>
         <CardHeader>
           <CardTitle>Notifications</CardTitle>
-          <CardDescription>How often should we remind you to log your day?</CardDescription>
+          <CardDescription>Choose when to be reminded to log your day.</CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
           <div className="flex items-center justify-between p-4 border rounded-lg">
             <Label htmlFor="notifications-enabled" className="text-base">
               Enable Notifications
             </Label>
-            <Switch id="notifications-enabled" defaultChecked />
+            <Switch id="notifications-enabled" checked={isNotificationsEnabled} onCheckedChange={setIsNotificationsEnabled} />
           </div>
-          <div className="space-y-2">
-            <Label htmlFor="notification-interval">Remind me every</Label>
-            <Select defaultValue="4">
-              <SelectTrigger id="notification-interval">
-                <SelectValue placeholder="Select interval" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="1">1 Hour</SelectItem>
-                <SelectItem value="2">2 Hours</SelectItem>
-                <SelectItem value="4">4 Hours</SelectItem>
-                <SelectItem value="6">6 Hours</SelectItem>
-                <SelectItem value="8">8 Hours</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
+          {isNotificationsEnabled && (
+            <div className="space-y-4">
+                <Label>Reminder times</Label>
+                <div className="flex items-center gap-2">
+                    <Input type="time" value={newTime} onChange={(e) => setNewTime(e.target.value)} className="flex-1"/>
+                    <Button variant="outline" size="icon" onClick={handleAddTime} aria-label="Add time">
+                        <PlusCircle />
+                    </Button>
+                </div>
+                <div className="space-y-2">
+                    {notificationTimes.length > 0 ? (
+                        notificationTimes.map(time => (
+                            <div key={time} className="flex items-center justify-between p-2 rounded-md bg-muted/50">
+                                <span className="font-mono">{time}</span>
+                                <Button variant="ghost" size="icon" className="w-6 h-6 text-muted-foreground" onClick={() => handleRemoveTime(time)} aria-label={`Remove ${time}`}>
+                                    <X className="w-4 h-4" />
+                                </Button>
+                            </div>
+                        ))
+                    ) : (
+                        <p className="text-sm text-center text-muted-foreground">No reminder times set.</p>
+                    )}
+                </div>
+            </div>
+          )}
         </CardContent>
       </Card>
 
       <div className="pt-4 text-center space-y-4">
-        <Button size="lg">Save Changes</Button>
+        <Button size="lg" onClick={handleSaveNotificationPrefs} disabled={isLoading}>
+          {isLoading && <Loader2 className="animate-spin" />}
+          Save Changes
+        </Button>
         <Button size="lg" variant="destructive" onClick={handleLogout}>Sign Out</Button>
       </div>
     </div>

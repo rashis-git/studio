@@ -4,30 +4,31 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
     
-    // Rule for user-specific sub-collections (like savedActivities)
     match /users/{userId}/{documents=**} {
       allow read, write: if request.auth.uid == userId;
     }
 
-    // Rule for activity logs
     match /activity-logs/{logId} {
       allow create: if request.auth.uid != null && request.resource.data.userId == request.auth.uid;
-      allow read: if request.auth.uid != null && resource.data.userId == request.auth.uid;
+      allow read, list: if request.auth.uid != null && (resource == null || resource.data.userId == request.auth.uid);
     }
 
-    // Rule for mood/state logs
     match /state-logs/{logId} {
       allow create: if request.auth.uid != null && request.resource.data.userId == request.auth.uid;
       allow read: if request.auth.uid != null && resource.data.userId == request.auth.uid;
     }
 
-    // **CORRECT RULE FOR PLANNED ACTIVITIES**
     match /planned-activities/{planId} {
-      // Users can create a plan if the document's userId matches their own.
-      allow create: if request.auth.uid != null && request.resource.data.userId == request.auth.uid;
+      allow read, create, update, delete: if request.auth.uid != null && (
+        (request.method == 'create' && request.resource.data.userId == request.auth.uid) ||
+        (request.method != 'create' && resource.data.userId == request.auth.uid)
+      );
+      allow list: if request.auth.uid != null && request.query.get('userId') == request.auth.uid;
+    }
 
-      // Users can read, update, or delete a plan if the existing document's userId matches theirs.
-      allow read, update, delete: if request.auth.uid != null && resource.data.userId == request.auth.uid;
+    // New rule for notification preferences
+    match /notification-preferences/{userId} {
+      allow read, write: if request.auth.uid != null && request.auth.uid == userId;
     }
   }
 }

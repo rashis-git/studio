@@ -8,6 +8,7 @@ import { MainNav } from '@/components/main-nav';
 import { Loader2 } from 'lucide-react';
 import { doc, getDoc, setDoc, serverTimestamp } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
+import { useNotifications } from '@/hooks/use-notifications';
 
 export default function MainLayout({
   children,
@@ -17,6 +18,7 @@ export default function MainLayout({
   const { user, loading } = useAuth();
   const router = useRouter();
   const [isClient, setIsClient] = useState(false);
+  useNotifications(); // Initialize notification listener
 
   useEffect(() => {
     setIsClient(true);
