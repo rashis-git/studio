@@ -256,6 +256,7 @@ export default function LogTimePage() {
         open={isAddDialogOpen}
         onOpenChange={setIsAddDialogOpen}
         onAddActivity={handleAddActivity}
+        user={user}
       />
       
       {selectedActivity && (
