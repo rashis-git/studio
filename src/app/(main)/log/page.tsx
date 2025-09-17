@@ -15,7 +15,6 @@ import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/use-auth';
 import { db } from '@/lib/firebase';
 import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
-import { useSound } from '@/hooks/use-sound';
 
 type LoggedActivity = {
   activity: Activity;
@@ -67,7 +66,6 @@ export default function LogTimePage() {
   const [isPending, startTransition] = useTransition();
   const { toast } = useToast();
   const { user } = useAuth();
-  const playSaveSound = useSound('/sounds/save.mp3');
 
   useEffect(() => {
     setIsClient(true);
@@ -144,7 +142,6 @@ export default function LogTimePage() {
 
         await Promise.all(activityPromises);
         
-        playSaveSound();
         toast({
           title: "Log Saved!",
           description: "Your activities have been saved.",
@@ -171,7 +168,6 @@ export default function LogTimePage() {
     startTransition(async () => {
         const result = await saveMoodToFirestore({ ...mood, userId: user.uid });
         if (result.success) {
-            playSaveSound();
             toast({
                 title: "Mood Saved!",
                 description: "Your mood has been logged.",

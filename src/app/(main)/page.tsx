@@ -9,7 +9,6 @@ import type { Activity } from '@/lib/types';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { X, Check, RotateCcw, ArrowRight } from 'lucide-react';
-import { useSound } from '@/hooks/use-sound';
 
 const cardVariants = {
   initial: (direction: number) => ({
@@ -42,8 +41,6 @@ export default function ActivitySwipePage() {
 
   const activeActivity = useMemo(() => activities[activities.length - 1], [activities]);
 
-  const playSwipeSound = useSound('/sounds/swipe.mp3');
-
   const handleSwipe = (select: boolean) => {
     setDirection(select ? 1 : -1);
     
@@ -51,7 +48,6 @@ export default function ActivitySwipePage() {
       if (select) {
         setSelectedActivities((prev) => [...prev, activeActivity.id]);
       }
-      playSwipeSound();
       setActivities((prev) => prev.slice(0, prev.length - 1));
     }
   };
