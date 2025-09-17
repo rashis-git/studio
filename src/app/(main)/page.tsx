@@ -6,13 +6,14 @@ import { useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '@/hooks/use-auth';
 import { db } from '@/lib/firebase';
-import { collection, query, where, getDocs } from 'firebase/firestore';
+import { collection, query, getDocs } from 'firebase/firestore';
 import type { Activity } from '@/lib/types';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { X, Check, RotateCcw, ArrowRight, Loader2, BrainCircuit, Activity as ActivityIcon } from 'lucide-react';
+import { X, Check, RotateCcw, ArrowRight, Loader2, BrainCircuit, Activity as ActivityIcon, PlusCircle } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import { useSound } from '@/hooks/use-sound';
+import { AddActivityDialog } from '@/components/add-activity-dialog';
 
 const cardVariants = {
   initial: (direction: number) => ({
@@ -57,39 +58,40 @@ export default function ActivitySwipePage() {
   const [direction, setDirection] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
   const { playSound } = useSound();
+  const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
+
+  const fetchActivities = async () => {
+    // Robust check: Ensure we have a user with a valid UID before proceeding.
+    if (!user || typeof user.uid !== 'string' || user.uid.length === 0) {
+      setIsLoading(false); // Stop loading if user is not fully authenticated
+      return;
+    }
+    
+    setIsLoading(true);
+
+    try {
+      const activitiesCollectionRef = collection(db, 'users', user.uid, 'savedActivities');
+      const q = query(activitiesCollectionRef);
+      const querySnapshot = await getDocs(q);
+      const userActivities: Activity[] = [];
+      querySnapshot.forEach((doc) => {
+        const data = doc.data();
+        userActivities.push({
+          id: doc.id,
+          name: data.activityName,
+          icon: getIconForActivity(data.activityName),
+        });
+      });
+      setActivities(userActivities);
+      setInitialActivities(userActivities);
+    } catch (error) {
+      console.error("Firebase error while fetching activities:", error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   useEffect(() => {
-    const fetchActivities = async () => {
-      // Robust check: Ensure we have a user with a valid UID before proceeding.
-      if (!user || typeof user.uid !== 'string' || user.uid.length === 0) {
-        setIsLoading(false); // Stop loading if user is not fully authenticated
-        return;
-      }
-      
-      setIsLoading(true);
-
-      try {
-        const activitiesCollectionRef = collection(db, 'users', user.uid, 'savedActivities');
-        const q = query(activitiesCollectionRef);
-        const querySnapshot = await getDocs(q);
-        const userActivities: Activity[] = [];
-        querySnapshot.forEach((doc) => {
-          const data = doc.data();
-          userActivities.push({
-            id: doc.id,
-            name: data.activityName,
-            icon: getIconForActivity(data.activityName),
-          });
-        });
-        setActivities(userActivities);
-        setInitialActivities(userActivities);
-      } catch (error) {
-        console.error("Firebase error while fetching activities:", error);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
     fetchActivities();
   }, [user]);
 
@@ -116,6 +118,11 @@ export default function ActivitySwipePage() {
     setActivities(initialActivities);
     setSelectedActivities([]);
   };
+  
+  const handleActivityAdded = () => {
+    // When the dialog tells us an activity was added, we re-fetch to get the latest list.
+    fetchActivities();
+  }
 
   return (
     <div className="flex flex-col items-center justify-center h-full p-4 pt-8 overflow-hidden">
@@ -156,18 +163,27 @@ export default function ActivitySwipePage() {
             ) : (
                 <Card className="w-full max-w-xs h-full bg-gradient-to-br from-card to-muted/30">
                 <CardContent className="flex flex-col items-center justify-center h-full gap-4 p-6">
-                    <Check className="w-24 h-24 text-green-500" />
+                     <Check className="w-24 h-24 text-green-500" />
                     <h2 className="text-2xl font-semibold text-center font-headline">All done!</h2>
                     <p className="text-center text-muted-foreground">
-                    {initialActivities.length > 0 ? "You've reviewed all activities. Ready to log your time?" : "You don't have any saved activities yet."}
+                    {initialActivities.length > 0 ? "You've reviewed all activities." : "You don't have any saved activities yet."}
                     </p>
-                    <Button onClick={handleDone} className="w-full mt-4" size="lg" disabled={selectedActivities.length === 0 && initialActivities.length > 0}>
-                        Log Time <ArrowRight className="ml-2"/>
-                    </Button>
-                    <Button onClick={handleReset} variant="ghost" size="sm" className="mt-2">
-                    <RotateCcw className="mr-2" />
-                    Start Over
-                    </Button>
+                    
+                    {initialActivities.length > 0 ? (
+                         <>
+                            <Button onClick={handleDone} className="w-full mt-4" size="lg" disabled={selectedActivities.length === 0}>
+                                Log Time <ArrowRight className="ml-2"/>
+                            </Button>
+                            <Button onClick={handleReset} variant="ghost" size="sm" className="mt-2">
+                                <RotateCcw className="mr-2" />
+                                Start Over
+                            </Button>
+                        </>
+                    ) : (
+                        <Button onClick={() => setIsAddDialogOpen(true)} className="w-full mt-4" size="lg">
+                            <PlusCircle className="mr-2" /> Add Your First Activity
+                        </Button>
+                    )}
                 </CardContent>
                 </Card>
             )}
@@ -185,6 +201,19 @@ export default function ActivitySwipePage() {
           </Button>
         </div>
       )}
+
+      {!isLoading && initialActivities.length === 0 && (
+          <div className="mt-8 text-center">
+            <p className="text-muted-foreground">Get started by adding some activities you want to track.</p>
+          </div>
+      )}
+      
+      <AddActivityDialog
+        open={isAddDialogOpen}
+        onOpenChange={setIsAddDialogOpen}
+        onAddActivity={handleActivityAdded}
+        user={user}
+      />
     </div>
   );
 }

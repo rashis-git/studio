@@ -6,7 +6,6 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogD
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Checkbox } from '@/components/ui/checkbox';
 import { useToast } from '@/hooks/use-toast';
 import { db } from '@/lib/firebase';
 import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
@@ -21,43 +20,41 @@ interface AddActivityDialogProps {
 
 export function AddActivityDialog({ open, onOpenChange, onAddActivity, user }: AddActivityDialogProps) {
   const [name, setName] = useState('');
-  const [savePermanently, setSavePermanently] = useState(true);
   const { toast } = useToast();
 
   const handleAdd = async () => {
     if (!name.trim()) return;
 
-    if (savePermanently) {
-      if (!user) {
-        toast({
-          title: "Not Authenticated",
-          description: "You must be logged in to save an activity.",
-          variant: "destructive",
-        });
-        return;
-      }
-      try {
-        // Save to the user-specific sub-collection
-        const savedActivitiesRef = collection(db, 'users', user.uid, 'savedActivities');
-        await addDoc(savedActivitiesRef, {
-          activityName: name.trim(),
-          createdAt: serverTimestamp(),
-        });
-        toast({
-            title: "Activity Saved",
-            description: `"${name.trim()}" has been saved for future use.`
-        });
-      } catch (error: any) {
-        toast({
-          title: "Error Saving Activity",
-          description: error.message || "Could not save the activity to the database.",
-          variant: "destructive",
-        });
-        return; // Stop if saving fails
-      }
+    if (!user) {
+      toast({
+        title: "Not Authenticated",
+        description: "You must be logged in to save an activity.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    try {
+      // Save to the user-specific sub-collection
+      const savedActivitiesRef = collection(db, 'users', user.uid, 'savedActivities');
+      await addDoc(savedActivitiesRef, {
+        activityName: name.trim(),
+        createdAt: serverTimestamp(),
+      });
+      toast({
+          title: "Activity Saved",
+          description: `"${name.trim()}" has been saved for future use.`
+      });
+    } catch (error: any) {
+      toast({
+        title: "Error Saving Activity",
+        description: error.message || "Could not save the activity to the database.",
+        variant: "destructive",
+      });
+      return; // Stop if saving fails
     }
     
-    // Add to the current session's log regardless
+    // Notify the parent component that an activity was added.
     onAddActivity(name.trim());
     
     // Reset and close
@@ -71,7 +68,7 @@ export function AddActivityDialog({ open, onOpenChange, onAddActivity, user }: A
         <DialogHeader>
           <DialogTitle>Add New Activity</DialogTitle>
           <DialogDescription>
-            Add a custom activity to your log. You can save it for future use.
+            Add a custom activity to track. It will be saved permanently.
           </DialogDescription>
         </DialogHeader>
         <div className="grid gap-4 py-4">
@@ -87,14 +84,10 @@ export function AddActivityDialog({ open, onOpenChange, onAddActivity, user }: A
               placeholder="e.g., Meditate"
             />
           </div>
-          <div className="flex items-center space-x-2 justify-end col-span-4">
-            <Checkbox id="save-permanently" checked={savePermanently} onCheckedChange={(checked) => setSavePermanently(!!checked)} />
-            <Label htmlFor="save-permanently">Save for future days</Label>
-          </div>
         </div>
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
-          <Button onClick={handleAdd}>Add to Log</Button>
+          <Button onClick={handleAdd}>Add Activity</Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
