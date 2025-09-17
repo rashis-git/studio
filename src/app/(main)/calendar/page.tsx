@@ -4,21 +4,29 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useAuth } from '@/hooks/use-auth';
 import { db } from '@/lib/firebase';
-import { collection, query, where, getDocs, Timestamp } from 'firebase/firestore';
+import { collection, query, where, getDocs, Timestamp, addDoc } from 'firebase/firestore';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Calendar } from '@/components/ui/calendar';
 import { Progress } from '@/components/ui/progress';
-import { Bar, BarChart, XAxis, YAxis, Tooltip, Legend, ResponsiveContainer, Cell } from 'recharts';
-import { Loader2, AlertCircle, BarChart3 as BarChartIcon } from 'lucide-react';
+import { Loader2, AlertCircle, BarChart3 as BarChartIcon, CheckCircle2 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import { mockActivities } from '@/lib/data';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { format, startOfWeek, endOfWeek, eachDayOfInterval, isSameDay } from 'date-fns';
+import { format, startOfMonth, endOfMonth } from 'date-fns';
+import { PlanActivityDialog } from '@/components/plan-activity-dialog';
+import { useToast } from '@/hooks/use-toast';
 
 interface ActivityLog {
   activityName: string;
   durationMinutes: number;
   date: string; // YYYY-MM-DD
+}
+
+interface PlannedActivity {
+  id: string;
+  activityName: string;
+  date: string; // YYYY-MM-DD
+  time?: string;
 }
 
 interface AggregatedActivity {
@@ -30,7 +38,6 @@ interface AggregatedActivity {
 
 const getActivityData = (name: string) => {
     const activity = mockActivities.find(a => a.name === name);
-    // Simple hash function for consistent color generation
     const colorHash = name.split('').reduce((acc, char) => char.charCodeAt(0) + ((acc << 5) - acc), 0);
     const color = `hsl(${colorHash % 360}, 70%, 50%)`;
     
@@ -53,6 +60,35 @@ export default function CalendarPage() {
   const [dailyData, setDailyData] = useState<AggregatedActivity[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [isPlanDialogOpen, setIsPlanDialogOpen] = useState(false);
+  const [plannedDates, setPlannedDates] = useState<Date[]>([]);
+  const [currentMonth, setCurrentMonth] = useState(new Date());
+  const { toast } = useToast();
+
+  const fetchPlannedActivities = async (month: Date) => {
+    if (!user) return;
+    try {
+        const monthStart = format(startOfMonth(month), 'yyyy-MM-dd');
+        const monthEnd = format(endOfMonth(month), 'yyyy-MM-dd');
+        
+        const q = query(
+            collection(db, "planned-activities"),
+            where("userId", "==", user.uid),
+            where("date", ">=", monthStart),
+            where("date", "<=", monthEnd)
+        );
+
+        const querySnapshot = await getDocs(q);
+        const dates = querySnapshot.docs.map(doc => new Date(doc.data().date.replace(/-/g, '/'))); // More reliable date parsing
+        setPlannedDates(dates);
+    } catch (err) {
+        console.error("Failed to fetch planned activities", err);
+    }
+  };
+
+  useEffect(() => {
+    fetchPlannedActivities(currentMonth);
+  }, [user, currentMonth]);
 
   useEffect(() => {
     if (!user || !selectedDate) {
@@ -113,12 +149,38 @@ export default function CalendarPage() {
     fetchData();
   }, [user, selectedDate]);
 
+  const handleDayClick = (day: Date) => {
+    setSelectedDate(day);
+    setIsPlanDialogOpen(true);
+  };
+
+  const handleSavePlan = async ({ activityName, time }: { activityName: string, time: string }) => {
+    if (!user || !selectedDate) {
+      toast({ title: "Error", description: "No user or date selected.", variant: "destructive" });
+      return;
+    }
+
+    try {
+        await addDoc(collection(db, 'planned-activities'), {
+            userId: user.uid,
+            activityName,
+            date: format(selectedDate, 'yyyy-MM-dd'),
+            time,
+            createdAt: Timestamp.now(),
+        });
+        toast({ title: "Plan Saved!", description: `${activityName} scheduled for ${format(selectedDate, 'MMM d')}.` });
+        fetchPlannedActivities(currentMonth); // Refresh highlights
+    } catch (error: any) {
+        toast({ title: "Error Saving Plan", description: error.message, variant: "destructive" });
+    }
+  };
+
 
   return (
     <div className="p-4 pt-8 space-y-6">
       <header className="text-center">
         <h1 className="text-3xl font-bold font-headline">Your Activity Calendar</h1>
-        <p className="text-muted-foreground">Look back at your logged days.</p>
+        <p className="text-muted-foreground">Look back at your logged days or plan ahead.</p>
       </header>
 
       <Card>
@@ -127,7 +189,16 @@ export default function CalendarPage() {
             mode="single"
             selected={selectedDate}
             onSelect={setSelectedDate}
+            onDayClick={handleDayClick}
+            onMonthChange={setCurrentMonth}
             className="rounded-md"
+            modifiers={{ planned: plannedDates }}
+            modifiersStyles={{
+                planned: { 
+                    border: '2px solid hsl(var(--primary))',
+                    borderRadius: 'var(--radius)',
+                }
+            }}
           />
         </CardContent>
       </Card>
@@ -151,6 +222,7 @@ export default function CalendarPage() {
             <Card>
                 <CardHeader>
                     <CardTitle>Activities for {format(selectedDate, 'MMMM d, yyyy')}</CardTitle>
+                    <CardDescription>A summary of what you logged on this day.</CardDescription>
                 </CardHeader>
                 <CardContent>
                     {dailyData.length > 0 ? (
@@ -178,12 +250,20 @@ export default function CalendarPage() {
                     ) : (
                         <div className="flex flex-col items-center justify-center h-24 text-center bg-muted/50 rounded-lg">
                             <p className="font-semibold">No activities logged on this day.</p>
+                             <p className="text-sm text-muted-foreground">Click the date again to plan an activity.</p>
                         </div>
                     )}
                 </CardContent>
             </Card>
         </>
       )}
+
+       <PlanActivityDialog 
+        open={isPlanDialogOpen}
+        onOpenChange={setIsPlanDialogOpen}
+        selectedDate={selectedDate}
+        onSave={handleSavePlan}
+      />
     </div>
   );
 }
