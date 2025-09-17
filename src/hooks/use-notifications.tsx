@@ -10,23 +10,26 @@ import { doc, onSnapshot } from 'firebase/firestore';
 // based on user preferences in Firestore.
 export const useNotifications = () => {
   const { user } = useAuth();
-  const timersRef = useRef<NodeJS.Timeout[]>([]);
+  const intervalRef = useRef<NodeJS.Timeout | null>(null);
+  const lastFiredRef = useRef<string | null>(null);
 
   useEffect(() => {
-    // Clear any existing timers
-    const clearTimers = () => {
-      timersRef.current.forEach(timerId => clearTimeout(timerId));
-      timersRef.current = [];
+    // Function to clear any existing interval
+    const clearInterval = () => {
+      if (intervalRef.current) {
+        global.clearInterval(intervalRef.current);
+        intervalRef.current = null;
+      }
     };
 
     if (!user) {
-      clearTimers();
+      clearInterval();
       return;
     }
 
     // Set up a listener for real-time updates to notification preferences
     const unsub = onSnapshot(doc(db, 'notification-preferences', user.uid), (doc) => {
-      clearTimers();
+      clearInterval();
 
       const areNotificationsEnabled = localStorage.getItem('notifications-enabled') === 'true';
       if (!areNotificationsEnabled || Notification.permission !== 'granted') {
@@ -34,45 +37,46 @@ export const useNotifications = () => {
       }
 
       if (doc.exists()) {
-        const times = doc.data().times as string[];
+        const times = doc.data().times as string[] | undefined;
         if (times && times.length > 0) {
-          scheduleNotifications(times);
+          startNotificationChecker(times);
         }
       }
     });
-
-    const scheduleNotifications = (times: string[]) => {
-      const now = new Date();
-      
-      times.forEach(timeStr => {
-        const [hours, minutes] = timeStr.split(':').map(Number);
-        
-        const notificationTime = new Date();
-        notificationTime.setHours(hours, minutes, 0, 0);
-
-        let timeout = notificationTime.getTime() - now.getTime();
-        
-        // If the time has already passed for today, schedule it for tomorrow
-        if (timeout < 0) {
-          timeout += 24 * 60 * 60 * 1000; // add 24 hours
-        }
-        
-        const timerId = setTimeout(() => {
-          new Notification('DayFlow Reminder', {
-            body: "Don't forget to log your activities for the day!",
-            icon: '/logo.svg', // Assumes a logo is in the public folder
-          });
-          // DO NOT reschedule here. The onSnapshot listener is the single source of truth.
-          // The next time the app loads, it will schedule the next notification correctly.
-        }, timeout);
-
-        timersRef.current.push(timerId);
-      });
+    
+    const startNotificationChecker = (times: string[]) => {
+        // This function runs every 30 seconds to check if a notification should be fired.
+        // This is more robust than a single large setTimeout, especially across timezones.
+        intervalRef.current = setInterval(() => {
+            const now = new Date();
+            const currentTime = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+            
+            // Check if the current time matches any of the user's preferred times
+            if (times.includes(currentTime)) {
+                // To avoid firing multiple notifications in the same minute,
+                // we check if we've already fired for this specific time.
+                if (lastFiredRef.current !== currentTime) {
+                    console.log(`Time match: ${currentTime}. Triggering notification.`);
+                    new Notification('DayFlow Reminder', {
+                        body: "Don't forget to log your activities for the day!",
+                        icon: '/logo.svg',
+                    });
+                    lastFiredRef.current = currentTime;
+                }
+            } else {
+                // If the current time doesn't match any target time, reset the last fired ref
+                // This ensures that if the user sets a notification for the *next* minute, it will fire.
+                if (lastFiredRef.current !== null) {
+                    lastFiredRef.current = null;
+                }
+            }
+        }, 30 * 1000); // Check every 30 seconds
     };
 
-    // Cleanup function
+
+    // Cleanup function: clear interval and unsubscribe from Firestore on component unmount
     return () => {
-      clearTimers();
+      clearInterval();
       unsub();
     };
   }, [user]);
