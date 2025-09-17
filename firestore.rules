@@ -1,4 +1,3 @@
-
 rules_version = '2';
 
 service cloud.firestore {
@@ -13,7 +12,6 @@ service cloud.firestore {
     match /activity-logs/{logId} {
       allow create: if request.auth.uid != null && request.resource.data.userId == request.auth.uid;
       allow read: if request.auth.uid != null && resource.data.userId == request.auth.uid;
-      allow list: if request.auth.uid != null && request.query.get('userId') == request.auth.uid;
     }
 
     // Rule for mood/state logs
@@ -26,13 +24,12 @@ service cloud.firestore {
     match /planned-activities/{planId} {
       allow read, update, delete: if request.auth.uid != null && resource.data.userId == request.auth.uid;
       allow create: if request.auth.uid != null && request.resource.data.userId == request.auth.uid;
-      allow list: if request.auth.uid != null && request.query.get('userId') == request.auth.uid;
     }
 
-    // CORRECTED RULE for notification preferences
+    // NEW RULE: This rule secures notification preferences.
+    // A user can only read or write to their own notification settings document.
     match /notification-preferences/{userId} {
-      // Allow a user to read and write to their own notification document.
-      allow read, write: if request.auth.uid == userId;
+      allow read, write: if request.auth.uid != null && request.auth.uid == userId;
     }
   }
 }
