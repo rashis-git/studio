@@ -105,8 +105,6 @@ export default function DashboardPage() {
             collection(db, 'planned-activities'),
             where('userId', '==', user.uid),
             where('date', '==', todayStr)
-            // NOTE: orderBy('time') was removed to prevent requiring a composite index.
-            // Sorting is now handled on the client.
         );
         const plansSnapshot = await getDocs(plansQuery);
         const plans: PlannedActivity[] = [];
