@@ -3,13 +3,14 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Layers, BarChart3, Settings, PieChart, CalendarDays } from 'lucide-react';
+import { Layers, BarChart3, Settings, PieChart, CalendarDays, BarChartHorizontal } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 const navItems = [
   { href: '/', label: 'Today', icon: Layers },
   { href: '/log', label: 'Log', icon: BarChart3 },
   { href: '/dashboard', label: 'Dashboard', icon: PieChart },
+  { href: '/analysis', label: 'Analysis', icon: BarChartHorizontal },
   { href: '/calendar', label: 'Calendar', icon: CalendarDays },
   { href: '/settings', label: 'Settings', icon: Settings },
 ];
@@ -19,7 +20,7 @@ export function MainNav() {
 
   return (
     <div className="fixed bottom-0 left-0 z-50 w-full h-16 border-t bg-background">
-      <div className="grid h-full max-w-lg grid-cols-5 mx-auto">
+      <div className="grid h-full max-w-lg grid-cols-6 mx-auto">
         {navItems.map(({ href, label, icon: Icon }) => {
           const isActive = (pathname === '/' && href === '/') || (pathname.startsWith(href) && href !== '/');
           return (
@@ -27,11 +28,11 @@ export function MainNav() {
               key={href}
               href={href}
               className={cn(
-                'inline-flex flex-col items-center justify-center px-5 rounded-lg hover:bg-muted/50 group',
+                'inline-flex flex-col items-center justify-center px-2 rounded-lg hover:bg-muted/50 group',
                 isActive ? 'text-primary' : 'text-muted-foreground'
               )}
             >
-              <Icon className="w-6 h-6 mb-1" />
+              <Icon className="w-5 h-5 mb-1" />
               <span className="text-xs font-medium">{label}</span>
             </Link>
           );
