@@ -60,6 +60,20 @@ export default function SettingsPage() {
     document.documentElement.className = theme;
     localStorage.setItem('dayflow-theme', theme);
   };
+  
+  const handleNotificationToggle = (enabled: boolean) => {
+    setIsNotificationsEnabled(enabled);
+    if (enabled && Notification.permission === 'default') {
+      Notification.requestPermission().then(permission => {
+        if (permission === 'granted') {
+          toast({ title: "Notifications Enabled!", description: "You will now receive reminders."});
+        } else {
+          toast({ title: "Notifications Blocked", description: "You can enable notifications in your browser settings.", variant: "destructive"});
+          setIsNotificationsEnabled(false); // Revert toggle if permission is denied
+        }
+      });
+    }
+  };
 
   const handleLogout = async () => {
     await logout();
@@ -87,13 +101,7 @@ export default function SettingsPage() {
         const docRef = doc(db, 'notification-preferences', user.uid);
         await setDoc(docRef, { userId: user.uid, times: notificationTimes });
         localStorage.setItem('notifications-enabled', String(isNotificationsEnabled));
-
-        // This is a simple way to ask for permission if it's enabled.
-        // The actual scheduling is handled by the useNotification hook.
-        if (isNotificationsEnabled && Notification.permission === "default") {
-             Notification.requestPermission();
-        }
-
+        
         toast({ title: "Preferences Saved!", description: "Your notification settings have been updated."});
     } catch(e: any) {
         toast({ title: "Error", description: e.message || "Failed to save preferences.", variant: "destructive"});
@@ -169,7 +177,7 @@ export default function SettingsPage() {
             <Label htmlFor="notifications-enabled" className="text-base">
               Enable Notifications
             </Label>
-            <Switch id="notifications-enabled" checked={isNotificationsEnabled} onCheckedChange={setIsNotificationsEnabled} />
+            <Switch id="notifications-enabled" checked={isNotificationsEnabled} onCheckedChange={handleNotificationToggle} />
           </div>
           {isNotificationsEnabled && (
             <div className="space-y-4">
