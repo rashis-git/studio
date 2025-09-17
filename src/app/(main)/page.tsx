@@ -61,9 +61,8 @@ export default function ActivitySwipePage() {
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
 
   const fetchActivities = async () => {
-    // Robust check: Ensure we have a user with a valid UID before proceeding.
     if (!user || typeof user.uid !== 'string' || user.uid.length === 0) {
-      setIsLoading(false); // Stop loading if user is not fully authenticated
+      setIsLoading(false);
       return;
     }
     
@@ -120,7 +119,6 @@ export default function ActivitySwipePage() {
   };
   
   const handleActivityAdded = () => {
-    // When the dialog tells us an activity was added, we re-fetch to get the latest list.
     fetchActivities();
   }
 
@@ -166,24 +164,27 @@ export default function ActivitySwipePage() {
                      <Check className="w-24 h-24 text-green-500" />
                     <h2 className="text-2xl font-semibold text-center font-headline">All done!</h2>
                     <p className="text-center text-muted-foreground">
-                    {initialActivities.length > 0 ? "You've reviewed all activities." : "You don't have any saved activities yet."}
+                        {selectedActivities.length > 0 ? "You've reviewed all activities." : "Add some activities to get started."}
                     </p>
                     
-                    {initialActivities.length > 0 ? (
-                         <>
-                            <Button onClick={handleDone} className="w-full mt-4" size="lg" disabled={selectedActivities.length === 0}>
+                    <div className="w-full mt-4 space-y-2">
+                        {selectedActivities.length > 0 && (
+                            <Button onClick={handleDone} className="w-full" size="lg">
                                 Log Time <ArrowRight className="ml-2"/>
                             </Button>
-                            <Button onClick={handleReset} variant="ghost" size="sm" className="mt-2">
+                        )}
+
+                        <Button onClick={() => setIsAddDialogOpen(true)} className="w-full" size="lg" variant={selectedActivities.length > 0 ? "outline" : "default"}>
+                            <PlusCircle className="mr-2" /> Add Activity
+                        </Button>
+                        
+                        {initialActivities.length > 0 && (
+                             <Button onClick={handleReset} variant="ghost" size="sm" className="w-full">
                                 <RotateCcw className="mr-2" />
                                 Start Over
                             </Button>
-                        </>
-                    ) : (
-                        <Button onClick={() => setIsAddDialogOpen(true)} className="w-full mt-4" size="lg">
-                            <PlusCircle className="mr-2" /> Add Your First Activity
-                        </Button>
-                    )}
+                        )}
+                    </div>
                 </CardContent>
                 </Card>
             )}
@@ -202,7 +203,7 @@ export default function ActivitySwipePage() {
         </div>
       )}
 
-      {!isLoading && initialActivities.length === 0 && (
+      {!isLoading && initialActivities.length === 0 && !activeActivity && (
           <div className="mt-8 text-center">
             <p className="text-muted-foreground">Get started by adding some activities you want to track.</p>
           </div>
