@@ -13,7 +13,7 @@ import { UnloggedTimeSuggestions } from '@/components/unlogged-time-suggestions'
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/use-auth';
 import { db } from '@/lib/firebase';
-import { collection, addDoc, serverTimestamp, query, where, getDocs, writeBatch } from 'firebase/firestore';
+import { collection, addDoc, serverTimestamp, query, where, getDocs, writeBatch, doc } from 'firebase/firestore';
 import type { User } from 'firebase/auth';
 import { useRouter } from 'next/navigation';
 
@@ -111,7 +111,8 @@ export default function LogTimePage() {
     }
   };
 
-  const handleAddActivity = () => {
+  const handleActivityAdded = () => {
+    // Navigate to the 'Today' page to re-select activities including the new one.
     router.push('/');
   };
 
@@ -158,8 +159,7 @@ export default function LogTimePage() {
       try {
         const batch = writeBatch(db);
         activitiesToSave.forEach(activity => {
-          const docRef = addDoc(collection(db, 'activity-logs'), activity)._key.path.segments;
-          const newDocRef = collection(db, 'activity-logs').doc();
+          const newDocRef = doc(collection(db, 'activity-logs'));
           batch.set(newDocRef, activity);
         });
 
@@ -174,6 +174,7 @@ export default function LogTimePage() {
         localStorage.removeItem('selectedActivities');
 
       } catch (error: any) {
+        console.error("Error saving log:", error);
         toast({
           title: "Error Saving Log",
           description: error.message || "An unknown error occurred.",
@@ -274,7 +275,7 @@ export default function LogTimePage() {
       <AddActivityDialog
         open={isAddDialogOpen}
         onOpenChange={setIsAddDialogOpen}
-        onActivityAdded={handleAddActivity}
+        onActivityAdded={handleActivityAdded}
         user={user}
       />
       
