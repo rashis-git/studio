@@ -69,7 +69,8 @@ export default function ActivitySwipePage() {
       setIsLoading(true);
 
       try {
-        const q = query(collection(db, "savedActivities"), where("userId", "==", user.uid));
+        const activitiesCollectionRef = collection(db, 'users', user.uid, 'savedActivities');
+        const q = query(activitiesCollectionRef);
         const querySnapshot = await getDocs(q);
         const userActivities: Activity[] = [];
         querySnapshot.forEach((doc) => {

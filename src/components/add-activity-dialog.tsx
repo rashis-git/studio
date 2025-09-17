@@ -37,9 +37,10 @@ export function AddActivityDialog({ open, onOpenChange, onAddActivity, user }: A
         return;
       }
       try {
-        await addDoc(collection(db, 'savedActivities'), {
+        // Save to the user-specific sub-collection
+        const savedActivitiesRef = collection(db, 'users', user.uid, 'savedActivities');
+        await addDoc(savedActivitiesRef, {
           activityName: name.trim(),
-          userId: user.uid,
           createdAt: serverTimestamp(),
         });
         toast({
