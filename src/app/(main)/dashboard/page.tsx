@@ -104,20 +104,33 @@ export default function DashboardPage() {
         const plansQuery = query(
             collection(db, 'planned-activities'),
             where('userId', '==', user.uid),
-            where('date', '==', todayStr),
-            orderBy('time', 'asc')
+            where('date', '==', todayStr)
+            // NOTE: orderBy('time') was removed to prevent requiring a composite index.
+            // Sorting is now handled on the client.
         );
         const plansSnapshot = await getDocs(plansQuery);
         const plans: PlannedActivity[] = [];
         plansSnapshot.forEach(doc => {
             plans.push({ id: doc.id, ...doc.data()} as PlannedActivity);
         });
-        setPlannedActivities(plans);
+        
+        // Sort the plans by time on the client
+        const sortedPlans = plans.sort((a, b) => {
+            if (a.time && b.time) {
+                return a.time.localeCompare(b.time);
+            }
+            return 0;
+        });
+        setPlannedActivities(sortedPlans);
 
 
       } catch (err: any) {
         console.error("Error fetching dashboard data:", err);
-        setError("Failed to fetch your activity data. Please try again later.");
+         if (err.code === 'failed-precondition') {
+             setError("A Firestore index is required for this query. The error console should provide a link to create it automatically.");
+        } else {
+            setError("Failed to fetch your activity data. Please try again later.");
+        }
       } finally {
         setIsLoading(false);
       }
@@ -164,10 +177,12 @@ export default function DashboardPage() {
                     {plannedActivities.map(plan => (
                         <div key={plan.id} className="flex items-center justify-between p-3 rounded-md bg-muted/50">
                             <span className="font-semibold">{plan.activityName}</span>
-                            <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                                <Clock className="w-4 h-4" />
-                                <span>{plan.time}</span>
-                            </div>
+                            {plan.time && (
+                                <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                                    <Clock className="w-4 h-4" />
+                                    <span>{plan.time}</span>
+                                </div>
+                            )}
                         </div>
                     ))}
                 </div>
