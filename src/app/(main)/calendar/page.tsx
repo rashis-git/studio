@@ -81,8 +81,13 @@ export default function CalendarPage() {
         const querySnapshot = await getDocs(q);
         const dates = querySnapshot.docs.map(doc => new Date(doc.data().date.replace(/-/g, '/'))); // More reliable date parsing
         setPlannedDates(dates);
-    } catch (err) {
+    } catch (err: any) {
         console.error("Failed to fetch planned activities", err);
+        if (err.code === 'failed-precondition') {
+          setError("This query requires a Firestore index. Please create a composite index for the 'planned-activities' collection on 'userId' (asc) and 'date' (asc).");
+        } else {
+          setError("Failed to fetch planned activities.");
+        }
     }
   };
 
@@ -118,25 +123,24 @@ export default function CalendarPage() {
         
         if (logs.length === 0) {
             setDailyData([]);
-            return;
+        } else {
+            const activityMap = new Map<string, number>();
+            logs.forEach(log => {
+                const currentDuration = activityMap.get(log.activityName) || 0;
+                activityMap.set(log.activityName, currentDuration + log.durationMinutes);
+            });
+
+            const totalMinutesAllActivities = Array.from(activityMap.values()).reduce((acc, curr) => acc + curr, 0);
+
+            const aggregated = Array.from(activityMap.entries()).map(([name, totalMinutes]) => ({
+                name,
+                totalMinutes,
+                icon: getActivityData(name).icon,
+                percentage: totalMinutesAllActivities > 0 ? (totalMinutes / totalMinutesAllActivities) * 100 : 0,
+            })).sort((a, b) => b.totalMinutes - a.totalMinutes);
+            
+            setDailyData(aggregated);
         }
-
-        const activityMap = new Map<string, number>();
-        logs.forEach(log => {
-            const currentDuration = activityMap.get(log.activityName) || 0;
-            activityMap.set(log.activityName, currentDuration + log.durationMinutes);
-        });
-
-        const totalMinutesAllActivities = Array.from(activityMap.values()).reduce((acc, curr) => acc + curr, 0);
-
-        const aggregated = Array.from(activityMap.entries()).map(([name, totalMinutes]) => ({
-            name,
-            totalMinutes,
-            icon: getActivityData(name).icon,
-            percentage: totalMinutesAllActivities > 0 ? (totalMinutes / totalMinutesAllActivities) * 100 : 0,
-        })).sort((a, b) => b.totalMinutes - a.totalMinutes);
-        
-        setDailyData(aggregated);
 
       } catch (err: any) {
         console.error("Error fetching activity logs:", err);
@@ -217,7 +221,7 @@ export default function CalendarPage() {
         </Alert>
       )}
 
-      {!isLoading && !error && selectedDate && (
+      {!isLoading && !error && selectedDate && dailyData.length > 0 && (
         <>
             <Card>
                 <CardHeader>
@@ -225,37 +229,41 @@ export default function CalendarPage() {
                     <CardDescription>A summary of what you logged on this day.</CardDescription>
                 </CardHeader>
                 <CardContent>
-                    {dailyData.length > 0 ? (
-                        <div className="space-y-4">
-                            {dailyData.map((activity, index) => {
-                                const Icon = activity.icon;
-                                return (
-                                    <Card key={index} className="overflow-hidden bg-gradient-to-br from-card to-muted/30">
-                                        <CardContent className="p-4">
-                                            <div className="flex items-center justify-between gap-4">
-                                                <div className="flex items-center gap-4">
-                                                    <Icon className="w-8 h-8 text-primary" />
-                                                    <span className="font-semibold">{activity.name}</span>
-                                                </div>
-                                                <span className="font-bold font-headline text-lg">
-                                                    {formatTime(activity.totalMinutes)}
-                                                </span>
+                    <div className="space-y-4">
+                        {dailyData.map((activity, index) => {
+                            const Icon = activity.icon;
+                            return (
+                                <Card key={index} className="overflow-hidden bg-gradient-to-br from-card to-muted/30">
+                                    <CardContent className="p-4">
+                                        <div className="flex items-center justify-between gap-4">
+                                            <div className="flex items-center gap-4">
+                                                <Icon className="w-8 h-8 text-primary" />
+                                                <span className="font-semibold">{activity.name}</span>
                                             </div>
-                                            <Progress value={activity.percentage} className="mt-3 h-2" />
-                                        </CardContent>
-                                    </Card>
-                                );
-                            })}
-                        </div>
-                    ) : (
-                        <div className="flex flex-col items-center justify-center h-24 text-center bg-muted/50 rounded-lg">
-                            <p className="font-semibold">No activities logged on this day.</p>
-                             <p className="text-sm text-muted-foreground">Click the date again to plan an activity.</p>
-                        </div>
-                    )}
+                                            <span className="font-bold font-headline text-lg">
+                                                {formatTime(activity.totalMinutes)}
+                                            </span>
+                                        </div>
+                                        <Progress value={activity.percentage} className="mt-3 h-2" />
+                                    </CardContent>
+                                </Card>
+                            );
+                        })}
+                    </div>
                 </CardContent>
             </Card>
         </>
+      )}
+
+      {!isLoading && !error && selectedDate && dailyData.length === 0 && (
+          <Card>
+              <CardContent className="pt-6">
+                  <div className="flex flex-col items-center justify-center h-24 text-center bg-muted/50 rounded-lg">
+                      <p className="font-semibold">No activities logged on this day.</p>
+                      <p className="text-sm text-muted-foreground">Click the date again to plan an activity.</p>
+                  </div>
+              </CardContent>
+          </Card>
       )}
 
        <PlanActivityDialog 
