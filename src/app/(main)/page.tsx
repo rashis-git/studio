@@ -9,6 +9,7 @@ import type { Activity } from '@/lib/types';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { X, Check, RotateCcw, ArrowRight } from 'lucide-react';
+import { useSound } from '@/hooks/use-sound';
 
 const cardVariants = {
   initial: (direction: number) => ({
@@ -38,11 +39,13 @@ export default function ActivitySwipePage() {
   const [activities, setActivities] = useState(mockActivities);
   const [selectedActivities, setSelectedActivities] = useState<string[]>([]);
   const [direction, setDirection] = useState(0);
+  const { playSound } = useSound();
 
   const activeActivity = useMemo(() => activities[activities.length - 1], [activities]);
 
   const handleSwipe = (select: boolean) => {
     setDirection(select ? 1 : -1);
+    playSound();
     
     if (activeActivity) {
       if (select) {
@@ -88,7 +91,7 @@ export default function ActivitySwipePage() {
               }}
               className="absolute w-full max-w-xs h-full"
             >
-              <Card className="relative w-full h-full shadow-xl">
+              <Card className="relative w-full h-full shadow-xl bg-gradient-to-br from-card to-muted/30">
                 <CardContent className="flex flex-col items-center justify-center h-full gap-6 p-6">
                   <activeActivity.icon className="w-24 h-24 text-primary" strokeWidth={1.5} />
                   <p className="text-2xl font-semibold text-center font-headline">{activeActivity.name}</p>
@@ -96,7 +99,7 @@ export default function ActivitySwipePage() {
               </Card>
             </motion.div>
           ) : (
-            <Card className="w-full max-w-xs h-full">
+            <Card className="w-full max-w-xs h-full bg-gradient-to-br from-card to-muted/30">
               <CardContent className="flex flex-col items-center justify-center h-full gap-4 p-6">
                 <Check className="w-24 h-24 text-green-500" />
                 <h2 className="text-2xl font-semibold text-center font-headline">All done!</h2>
