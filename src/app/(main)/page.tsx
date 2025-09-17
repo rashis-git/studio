@@ -10,7 +10,7 @@ import { collection, query, getDocs } from 'firebase/firestore';
 import type { Activity } from '@/lib/types';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { X, Check, RotateCcw, ArrowRight, Loader2, BrainCircuit, Activity as ActivityIcon, PlusCircle } from 'lucide-react';
+import { X, Check, RotateCcw, ArrowRight, Loader2, BrainCircuit, Activity as ActivityIcon, PlusCircle, Plus } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import { useSound } from '@/hooks/use-sound';
 import { AddActivityDialog } from '@/components/add-activity-dialog';
@@ -125,22 +125,10 @@ export default function ActivitySwipePage() {
   }
 
   return (
-    <div className="flex flex-col items-center justify-center h-full p-4 pt-8 overflow-hidden">
-      <header className="w-full mb-8">
-        <div className="relative flex items-start justify-between">
-            <div className="flex-1 text-center">
-                <h1 className="text-3xl font-bold font-headline">What have you been up to?</h1>
-                <p className="text-muted-foreground">Swipe right for done, left for skip.</p>
-            </div>
-            <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => setIsAddDialogOpen(true)}
-                className="shrink-0"
-            >
-                <PlusCircle className="mr-2" /> Add
-            </Button>
-        </div>
+    <div className="flex flex-col items-center justify-between h-full p-4 pt-8 overflow-hidden">
+      <header className="w-full mb-4 text-center">
+        <h1 className="text-3xl font-bold font-headline">What have you been up to?</h1>
+        <p className="text-muted-foreground">Swipe right for done, left for skip.</p>
       </header>
 
       <div className="relative flex items-center justify-center w-full h-[60dvh] max-h-[450px]">
@@ -188,6 +176,10 @@ export default function ActivitySwipePage() {
                             </Button>
                         )}
                         
+                        <Button onClick={() => setIsAddDialogOpen(true)} className="w-full" variant="secondary">
+                           <PlusCircle className="mr-2"/> Add New Activity
+                        </Button>
+                        
                         {initialActivities.length > 0 && (
                              <Button onClick={handleReset} variant="ghost" size="sm" className="w-full">
                                 <RotateCcw className="mr-2" />
@@ -202,20 +194,31 @@ export default function ActivitySwipePage() {
         )}
       </div>
       
-      {!isLoading && activeActivity && (
-        <div className="flex justify-center w-full gap-6 mt-8">
-          <Button variant="outline" size="icon" className="w-16 h-16 rounded-full shadow-lg" onClick={() => handleSwipe(false)}>
-            <X className="w-8 h-8 text-destructive" />
-          </Button>
-          <Button variant="outline" size="icon" className="w-16 h-16 rounded-full shadow-lg" onClick={() => handleSwipe(true)}>
-            <Check className="w-8 h-8 text-green-500" />
-          </Button>
-        </div>
-      )}
+      <div className="flex items-center justify-center w-full gap-6 my-8">
+        {!isLoading && activeActivity && (
+            <>
+            <Button variant="outline" size="icon" className="w-20 h-20 rounded-full shadow-lg" onClick={() => handleSwipe(false)}>
+                <X className="w-10 h-10 text-destructive" />
+            </Button>
+             <Button
+                variant="default"
+                size="icon"
+                onClick={() => setIsAddDialogOpen(true)}
+                className="w-16 h-16 rounded-full shadow-lg bg-gradient-to-br from-primary to-primary/70 text-primary-foreground transform hover:scale-110 transition-transform"
+                aria-label="Add new activity"
+            >
+                <Plus className="w-8 h-8" />
+            </Button>
+            <Button variant="outline" size="icon" className="w-20 h-20 rounded-full shadow-lg" onClick={() => handleSwipe(true)}>
+                <Check className="w-10 h-10 text-green-500" />
+            </Button>
+            </>
+        )}
+      </div>
 
       {!isLoading && initialActivities.length === 0 && !activeActivity && (
           <div className="mt-8 text-center">
-            <p className="text-muted-foreground">Get started by adding some activities you want to track.</p>
+            <p className="text-muted-foreground">Get started by adding your first activity.</p>
           </div>
       )}
       
