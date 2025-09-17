@@ -32,7 +32,7 @@
   }
 
   .theme-sunset {
-    --background: 19 100% 95%; /* Peach Puff #FFF0E9 */
+    --background: 19 100% 97%; /* Lighter Peach Puff */
     --foreground: 308 11% 26%; /* Dark Purple #4C3A4A */
     --card: 19 100% 97%;
     --card-foreground: 308 11% 26%;
@@ -55,7 +55,7 @@
   }
 
   .theme-midnight {
-    --background: 244 23% 9%; /* Darker Purple #12111C */
+    --background: 244 23% 12%; /* Lightened Dark Purple */
     --foreground: 250 33% 93%; /* Light Lavender #E0DDF0 */
     --card: 244 23% 15%;
     --card-foreground: 250 33% 93%;
