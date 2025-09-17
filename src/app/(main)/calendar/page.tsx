@@ -4,7 +4,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useAuth } from '@/hooks/use-auth';
 import { db } from '@/lib/firebase';
-import { collection, query, where, getDocs, Timestamp, addDoc } from 'firebase/firestore';
+import { collection, query, where, getDocs, Timestamp, addDoc, orderBy } from 'firebase/firestore';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Calendar } from '@/components/ui/calendar';
 import { Progress } from '@/components/ui/progress';
@@ -83,9 +83,10 @@ export default function CalendarPage() {
         setPlannedDates(dates);
     } catch (err: any) {
         console.error("Failed to fetch planned activities", err);
-        // This is a common error if the composite index is not created in Firestore.
-        if (err.code === 'failed-precondition') {
-             setError("This query requires a Firestore index. Please create a composite index for `planned-activities` on 'userId' (asc) and 'date' (asc) in your Firestore database. The console error should provide a direct link to create it.");
+        if (err.code === 'permission-denied') {
+            setError("Security rules are preventing access. Please ensure your firestore.rules are correctly configured for `planned-activities`.");
+        } else if (err.code === 'failed-precondition') {
+             setError("This query requires a Firestore index. Please create a composite index for `planned-activities` on 'userId' (asc) and 'date' (asc). The console error should provide a direct link to create it.");
         } else {
           setError("Failed to fetch planned activities.");
         }
@@ -276,3 +277,5 @@ export default function CalendarPage() {
     </div>
   );
 }
+
+    
