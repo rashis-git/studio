@@ -11,6 +11,7 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
 import { Loader2 } from 'lucide-react';
+import { Logo } from '@/components/logo';
 
 export default function LoginPage() {
   const [email, setEmail] = useState('');
@@ -40,6 +41,9 @@ export default function LoginPage() {
     <div className="flex items-center justify-center min-h-screen bg-muted/30">
       <Card className="w-full max-w-sm">
         <CardHeader className="text-center">
+            <div className="flex justify-center mb-4">
+                <Logo />
+            </div>
           <CardTitle className="text-2xl font-bold font-headline">Welcome Back</CardTitle>
           <CardDescription>Sign in to continue to DayFlow</CardDescription>
         </CardHeader>
