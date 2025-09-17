@@ -65,7 +65,11 @@ export default function DashboardPage() {
 
       try {
         const today = new Date();
-        const todayStr = today.toISOString().split('T')[0];
+        // Fix: Use local date parts to construct the date string to avoid timezone issues.
+        const year = today.getFullYear();
+        const month = String(today.getMonth() + 1).padStart(2, '0');
+        const day = String(today.getDate()).padStart(2, '0');
+        const todayStr = `${year}-${month}-${day}`;
 
         // Fetch Logged Activities
         const logsQuery = query(
