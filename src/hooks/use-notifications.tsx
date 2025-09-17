@@ -62,8 +62,8 @@ export const useNotifications = () => {
             body: "Don't forget to log your activities for the day!",
             icon: '/logo.svg', // Assumes a logo is in the public folder
           });
-          // Reschedule for the next day
-          scheduleNotifications([timeStr]);
+          // DO NOT reschedule here. The onSnapshot listener is the single source of truth.
+          // The next time the app loads, it will schedule the next notification correctly.
         }, timeout);
 
         timersRef.current.push(timerId);
