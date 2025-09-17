@@ -4,10 +4,10 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/hooks/use-auth';
 import { db } from '@/lib/firebase';
-import { collection, query, where, getDocs } from 'firebase/firestore';
-import { Card, CardContent } from '@/components/ui/card';
+import { collection, query, where, getDocs, orderBy } from 'firebase/firestore';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
-import { Loader2, AlertCircle, BarChart3 } from 'lucide-react';
+import { Loader2, AlertCircle, BarChart3, ListTodo, Clock } from 'lucide-react';
 import { mockActivities } from '@/lib/data';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import type { LucideIcon } from 'lucide-react';
@@ -16,6 +16,13 @@ interface ActivityLog {
   activityName: string;
   durationMinutes: number;
   date: string;
+}
+
+interface PlannedActivity {
+    id: string;
+    activityName: string;
+    time?: string;
+    date: string;
 }
 
 interface AggregatedActivity {
@@ -42,6 +49,7 @@ const formatTime = (minutes: number) => {
 export default function DashboardPage() {
   const { user } = useAuth();
   const [aggregatedData, setAggregatedData] = useState<AggregatedActivity[]>([]);
+  const [plannedActivities, setPlannedActivities] = useState<PlannedActivity[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -59,43 +67,56 @@ export default function DashboardPage() {
         const today = new Date();
         const todayStr = today.toISOString().split('T')[0];
 
-        const q = query(
+        // Fetch Logged Activities
+        const logsQuery = query(
           collection(db, 'activity-logs'),
           where('userId', '==', user.uid),
           where('date', '==', todayStr)
         );
-
-        const querySnapshot = await getDocs(q);
+        const logsSnapshot = await getDocs(logsQuery);
         const logs: ActivityLog[] = [];
-        querySnapshot.forEach((doc) => {
+        logsSnapshot.forEach((doc) => {
           logs.push(doc.data() as ActivityLog);
         });
 
-        if (logs.length === 0) {
+        if (logs.length > 0) {
+            const activityMap = new Map<string, number>();
+            logs.forEach(log => {
+              const currentDuration = activityMap.get(log.activityName) || 0;
+              activityMap.set(log.activityName, currentDuration + log.durationMinutes);
+            });
+            
+            const totalMinutesAllActivities = Array.from(activityMap.values()).reduce((acc, curr) => acc + curr, 0);
+            
+            const aggregated = Array.from(activityMap.entries()).map(([name, totalMinutes]) => ({
+              name,
+              totalMinutes,
+              icon: getActivityIcon(name),
+              percentage: totalMinutesAllActivities > 0 ? (totalMinutes / totalMinutesAllActivities) * 100 : 0,
+            })).sort((a, b) => b.totalMinutes - a.totalMinutes);
+
+            setAggregatedData(aggregated);
+        } else {
             setAggregatedData([]);
-            setIsLoading(false);
-            return;
         }
 
-        const activityMap = new Map<string, number>();
-        logs.forEach(log => {
-          const currentDuration = activityMap.get(log.activityName) || 0;
-          activityMap.set(log.activityName, currentDuration + log.durationMinutes);
+        // Fetch Planned Activities
+        const plansQuery = query(
+            collection(db, 'planned-activities'),
+            where('userId', '==', user.uid),
+            where('date', '==', todayStr),
+            orderBy('time', 'asc')
+        );
+        const plansSnapshot = await getDocs(plansQuery);
+        const plans: PlannedActivity[] = [];
+        plansSnapshot.forEach(doc => {
+            plans.push({ id: doc.id, ...doc.data()} as PlannedActivity);
         });
-        
-        const totalMinutesAllActivities = Array.from(activityMap.values()).reduce((acc, curr) => acc + curr, 0);
-        
-        const aggregated = Array.from(activityMap.entries()).map(([name, totalMinutes]) => ({
-          name,
-          totalMinutes,
-          icon: getActivityIcon(name),
-          percentage: totalMinutesAllActivities > 0 ? (totalMinutes / totalMinutesAllActivities) * 100 : 0,
-        })).sort((a, b) => b.totalMinutes - a.totalMinutes); // Sort by most time spent
+        setPlannedActivities(plans);
 
-        setAggregatedData(aggregated);
 
       } catch (err: any) {
-        console.error("Error fetching activity logs:", err);
+        console.error("Error fetching dashboard data:", err);
         setError("Failed to fetch your activity data. Please try again later.");
       } finally {
         setIsLoading(false);
@@ -129,11 +150,34 @@ export default function DashboardPage() {
     <div className="p-4 pt-8 space-y-6">
       <header className="text-center">
         <h1 className="text-3xl font-bold font-headline">Your Day's Dashboard</h1>
-        <p className="text-muted-foreground">A summary of your activities logged today.</p>
+        <p className="text-muted-foreground">A summary of your activities for today.</p>
       </header>
+
+      {plannedActivities.length > 0 && (
+        <Card>
+            <CardHeader>
+                <CardTitle className="flex items-center gap-2"><ListTodo /> Today's Plan</CardTitle>
+                <CardDescription>What you've got scheduled for today.</CardDescription>
+            </CardHeader>
+            <CardContent>
+                <div className="space-y-3">
+                    {plannedActivities.map(plan => (
+                        <div key={plan.id} className="flex items-center justify-between p-3 rounded-md bg-muted/50">
+                            <span className="font-semibold">{plan.activityName}</span>
+                            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                                <Clock className="w-4 h-4" />
+                                <span>{plan.time}</span>
+                            </div>
+                        </div>
+                    ))}
+                </div>
+            </CardContent>
+        </Card>
+      )}
       
       {aggregatedData.length > 0 ? (
         <div className="space-y-4">
+            <h2 className="text-xl font-bold font-headline text-center">Logged Activities</h2>
             {aggregatedData.map((activity, index) => {
                 const Icon = activity.icon;
                 return (
