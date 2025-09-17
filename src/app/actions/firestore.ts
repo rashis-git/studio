@@ -6,8 +6,9 @@ import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
 
 interface MoodData {
   energy: number;
-  focus: number;
-  mood: number;
+  productivity: number;
+  happinessIndex: number;
+  context: string;
   userId: string;
 }
 
@@ -21,8 +22,9 @@ export async function saveMoodToFirestore(moodData: MoodData) {
     await addDoc(collection(db, 'state-logs'), {
       checkInTime: serverTimestamp(),
       energy: moodData.energy,
-      focus: moodData.focus,
-      mood: moodData.mood,
+      productivity: moodData.productivity,
+      happinessIndex: moodData.happinessIndex,
+      context: moodData.context,
       userId: moodData.userId,
     });
     console.log('Server Action: saveMoodToFirestore successful.');
