@@ -69,10 +69,6 @@ export default function SettingsPage() {
             <Label htmlFor="email">Email</Label>
             <Input id="email" type="email" value={user?.email ?? ""} readOnly />
           </div>
-           <div className="space-y-2">
-            <Label htmlFor="uid">User ID</Label>
-            <Input id="uid" type="text" value={user?.uid ?? ""} readOnly />
-          </div>
         </CardContent>
       </Card>
       
