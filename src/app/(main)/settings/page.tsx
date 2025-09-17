@@ -69,6 +69,10 @@ export default function SettingsPage() {
             <Label htmlFor="email">Email</Label>
             <Input id="email" type="email" value={user?.email ?? ""} readOnly />
           </div>
+           <div className="space-y-2">
+            <Label htmlFor="uid">User ID</Label>
+            <Input id="uid" type="text" value={user?.uid ?? ""} readOnly />
+          </div>
         </CardContent>
       </Card>
       
@@ -88,7 +92,7 @@ export default function SettingsPage() {
                 <RadioGroupItem value={theme.value} id={theme.value} className="sr-only" />
                 <div className="flex items-center justify-center w-full gap-2">
                   <div className={`w-4 h-4 rounded-full bg-primary border`}></div>
-                  <div className={`w-4 h-4 rounded-full bg-secondary border`}></div>
+                  <div className={`w-4 h-4 rounded-full bg-secondary border`.trim()} ></div>
                   <div className={`w-4 h-4 rounded-full bg-accent border`}></div>
                 </div>
                 <span className="mt-2 text-sm font-medium">{theme.name}</span>
