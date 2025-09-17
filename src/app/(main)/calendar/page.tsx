@@ -76,17 +76,22 @@ export default function CalendarPage() {
         const startDateStr = format(weekStart, 'yyyy-MM-dd');
         const endDateStr = format(weekEnd, 'yyyy-MM-dd');
 
+        // Simplified query to avoid composite index requirement.
+        // We fetch everything from the start of the week and filter the end date on the client.
         const q = query(
           collection(db, 'activity-logs'),
           where('userId', '==', user.uid),
-          where('date', '>=', startDateStr),
-          where('date', '<=', endDateStr)
+          where('date', '>=', startDateStr)
         );
 
         const querySnapshot = await getDocs(q);
         const logs: ActivityLog[] = [];
         querySnapshot.forEach(doc => {
-          logs.push(doc.data() as ActivityLog);
+            const data = doc.data() as ActivityLog;
+            // Client-side filtering for the end of the week.
+            if (data.date <= endDateStr) {
+                 logs.push(data);
+            }
         });
         
         setWeeklyData(logs);
