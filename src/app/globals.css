@@ -32,48 +32,48 @@
   }
 
   .theme-sunset {
-    --background: 19 100% 97%; /* Lighter Peach Puff */
+    --background: 27 100% 97%; /* Lighter Peach Puff */
     --foreground: 308 11% 26%; /* Dark Purple #4C3A4A */
-    --card: 19 100% 97%;
+    --card: 27 100% 99%;
     --card-foreground: 308 11% 26%;
-    --popover: 19 100% 95%;
+    --popover: 27 100% 95%;
     --popover-foreground: 308 11% 26%;
     --primary: 20 100% 63%; /* Tangerine #FF8C42 */
     --primary-foreground: 0 0% 100%;
     --secondary: 7 100% 82%; /* Warm Pink #FFA69E */
     --secondary-foreground: 308 11% 26%;
-    --muted: 19 100% 92%;
+    --muted: 27 100% 94%;
     --muted-foreground: 308 11% 46%;
     --accent: 49 100% 50%; /* Bright Yellow #FFD000 */
     --accent-foreground: 308 11% 26%;
     --destructive: 0 84% 60%;
     --destructive-foreground: 0 0% 100%;
-    --border: 19 100% 90%;
-    --input: 19 100% 90%;
+    --border: 27 100% 92%;
+    --input: 27 100% 92%;
     --ring: 20 100% 63%;
     --radius: 0.5rem;
   }
 
-  .theme-midnight {
-    --background: 244 23% 12%; /* Lightened Dark Purple */
-    --foreground: 250 33% 93%; /* Light Lavender #E0DDF0 */
-    --card: 244 23% 15%;
-    --card-foreground: 250 33% 93%;
-    --popover: 244 23% 9%;
-    --popover-foreground: 250 33% 93%;
-    --primary: 247 28% 50%; /* Muted Purple #6759A6 */
+  .theme-azure {
+    --background: 210 100% 97%; /* Light Azure #F0F8FF */
+    --foreground: 220 15% 35%; /* Slate Gray #4A5568 */
+    --card: 210 100% 99%;
+    --card-foreground: 220 15% 35%;
+    --popover: 210 100% 97%;
+    --popover-foreground: 220 15% 35%;
+    --primary: 220 40% 57%; /* Periwinkle #6e85b7 */
     --primary-foreground: 0 0% 100%;
-    --secondary: 240 2% 20%; /* Dark Gray #2B2A39 */
-    --secondary-foreground: 250 33% 93%;
-    --muted: 240 2% 23%;
-    --muted-foreground: 250 33% 73%;
-    --accent: 165 67% 68%; /* Bright Mint #86E3CE */
-    --accent-foreground: 244 23% 12%;
-    --destructive: 0 63% 45%;
-    --destructive-foreground: 0 0% 98%;
-    --border: 240 2% 25%;
-    --input: 240 2% 25%;
-    --ring: 247 28% 50%;
+    --secondary: 35 63% 85%; /* Sandy Beige #F2DDC1 */
+    --secondary-foreground: 220 15% 25%;
+    --muted: 210 100% 94%;
+    --muted-foreground: 220 15% 55%;
+    --accent: 152 50% 75%; /* Seafoam Green #9FE2BF */
+    --accent-foreground: 220 15% 25%;
+    --destructive: 0 72% 51%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 210 100% 90%;
+    --input: 210 100% 90%;
+    --ring: 220 40% 57%;
     --radius: 0.5rem;
   }
 }

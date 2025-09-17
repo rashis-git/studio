@@ -17,7 +17,7 @@ import { Check } from 'lucide-react';
 const themes = [
   { name: 'Forest', value: 'theme-forest' },
   { name: 'Sunset', value: 'theme-sunset' },
-  { name: 'Midnight', value: 'theme-midnight' },
+  { name: 'Azure', value: 'theme-azure' },
 ];
 
 export default function SettingsPage() {
