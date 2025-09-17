@@ -62,12 +62,10 @@ export default function ActivitySwipePage() {
     const fetchActivities = async () => {
       // Robust check: Ensure we have a user with a valid UID before proceeding.
       if (!user || typeof user.uid !== 'string' || user.uid.length === 0) {
-        console.log('fetchActivities: Aborting fetch, user not fully authenticated.');
         setIsLoading(false); // Stop loading if user is not fully authenticated
         return;
       }
       
-      console.log(`fetchActivities: Starting fetch for user ID: ${user.uid}`);
       setIsLoading(true);
 
       try {
@@ -82,11 +80,10 @@ export default function ActivitySwipePage() {
             icon: getIconForActivity(data.activityName),
           });
         });
-        console.log(`fetchActivities: Successfully fetched ${userActivities.length} activities.`);
         setActivities(userActivities);
         setInitialActivities(userActivities);
       } catch (error) {
-        console.error("fetchActivities: A Firebase error occurred.", error);
+        console.error("Firebase error while fetching activities:", error);
       } finally {
         setIsLoading(false);
       }
