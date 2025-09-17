@@ -76,7 +76,7 @@ export default function CalendarPage() {
             where("userId", "==", user.uid),
             where("date", ">=", monthStart),
             where("date", "<=", monthEnd),
-            orderBy("date")
+            orderBy("date", "asc")
         );
 
         const querySnapshot = await getDocs(q);
@@ -202,8 +202,8 @@ export default function CalendarPage() {
             modifiers={{ planned: plannedDates }}
             modifiersStyles={{
                 planned: { 
-                    border: '2px solid hsl(var(--primary))',
-                    borderRadius: 'var(--radius)',
+                    fontWeight: 'bold',
+                    background: 'linear-gradient(45deg, hsl(var(--primary) / 0.1), hsl(var(--accent) / 0.1))',
                 }
             }}
           />
