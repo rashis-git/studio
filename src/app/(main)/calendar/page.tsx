@@ -1,20 +1,21 @@
 
 'use client';
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect } from 'react';
 import { useAuth } from '@/hooks/use-auth';
 import { db } from '@/lib/firebase';
 import { collection, query, where, getDocs, Timestamp, addDoc, orderBy } from 'firebase/firestore';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Calendar } from '@/components/ui/calendar';
 import { Progress } from '@/components/ui/progress';
-import { Loader2, AlertCircle, BarChart3 as BarChartIcon, CheckCircle2 } from 'lucide-react';
+import { Loader2, AlertCircle, BarChart3 as BarChartIcon, CheckCircle2, PlusCircle } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import { mockActivities } from '@/lib/data';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { format, startOfMonth, endOfMonth } from 'date-fns';
+import { format, startOfMonth, endOfMonth, isToday } from 'date-fns';
 import { PlanActivityDialog } from '@/components/plan-activity-dialog';
 import { useToast } from '@/hooks/use-toast';
+import { Button } from '@/components/ui/button';
 
 interface ActivityLog {
   activityName: string;
@@ -158,7 +159,6 @@ export default function CalendarPage() {
 
   const handleDayClick = (day: Date) => {
     setSelectedDate(day);
-    setIsPlanDialogOpen(true);
   };
 
   const handleSavePlan = async ({ activityName, time }: { activityName: string, time: string }) => {
@@ -199,11 +199,16 @@ export default function CalendarPage() {
             onDayClick={handleDayClick}
             onMonthChange={setCurrentMonth}
             className="rounded-md"
-            modifiers={{ planned: plannedDates }}
+            modifiers={{ planned: plannedDates, today: new Date() }}
             modifiersStyles={{
                 planned: { 
                     fontWeight: 'bold',
                     background: 'linear-gradient(45deg, hsl(var(--primary) / 0.1), hsl(var(--accent) / 0.1))',
+                },
+                today: {
+                    border: '2px solid hsl(var(--primary))',
+                    color: 'hsl(var(--primary-foreground))',
+                    backgroundColor: 'hsl(var(--primary) / 0.8)',
                 }
             }}
           />
@@ -224,14 +229,16 @@ export default function CalendarPage() {
         </Alert>
       )}
 
-      {!isLoading && !error && selectedDate && dailyData.length > 0 && (
-        <>
-            <Card>
-                <CardHeader>
-                    <CardTitle>Activities for {format(selectedDate, 'MMMM d, yyyy')}</CardTitle>
-                    <CardDescription>A summary of what you logged on this day.</CardDescription>
-                </CardHeader>
-                <CardContent>
+      {!isLoading && !error && selectedDate && (
+        <Card>
+            <CardHeader>
+                <CardTitle>
+                    {isToday(selectedDate) ? 'Today' : format(selectedDate, 'MMMM d, yyyy')}
+                </CardTitle>
+                <CardDescription>A summary of what you logged on this day.</CardDescription>
+            </CardHeader>
+            <CardContent>
+                {dailyData.length > 0 ? (
                     <div className="space-y-4">
                         {dailyData.map((activity, index) => {
                             const Icon = activity.icon;
@@ -253,20 +260,19 @@ export default function CalendarPage() {
                             );
                         })}
                     </div>
-                </CardContent>
-            </Card>
-        </>
-      )}
-
-      {!isLoading && !error && selectedDate && dailyData.length === 0 && (
-          <Card>
-              <CardContent className="pt-6">
+                ) : (
                   <div className="flex flex-col items-center justify-center h-24 text-center bg-muted/50 rounded-lg">
                       <p className="font-semibold">No activities logged on this day.</p>
-                      <p className="text-sm text-muted-foreground">Click the date again to plan an activity.</p>
                   </div>
-              </CardContent>
-          </Card>
+                )}
+                 <div className="mt-6 text-center">
+                    <Button onClick={() => setIsPlanDialogOpen(true)}>
+                        <PlusCircle className="mr-2 h-4 w-4"/>
+                        Plan an Activity
+                    </Button>
+                </div>
+            </CardContent>
+        </Card>
       )}
 
        <PlanActivityDialog 
