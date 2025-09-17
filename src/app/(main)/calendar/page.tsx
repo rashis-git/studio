@@ -83,8 +83,9 @@ export default function CalendarPage() {
         setPlannedDates(dates);
     } catch (err: any) {
         console.error("Failed to fetch planned activities", err);
+        // This is a common error if the composite index is not created in Firestore.
         if (err.code === 'failed-precondition') {
-          setError("This query requires a Firestore index. Please create a composite index for the 'planned-activities' collection on 'userId' (asc) and 'date' (asc).");
+             setError("This query requires a Firestore index. Please create a composite index for `planned-activities` on 'userId' (asc) and 'date' (asc) in your Firestore database. The console error should provide a direct link to create it.");
         } else {
           setError("Failed to fetch planned activities.");
         }
