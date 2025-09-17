@@ -23,10 +23,10 @@ const themes = [
 export default function SettingsPage() {
   const { user, logout } = useAuth();
   const router = useRouter();
-  const [currentTheme, setCurrentTheme] = useState('theme-indigo');
+  const [currentTheme, setCurrentTheme] = useState('theme-forest');
 
   useEffect(() => {
-    const savedTheme = localStorage.getItem('dayflow-theme') || 'theme-indigo';
+    const savedTheme = localStorage.getItem('dayflow-theme') || 'theme-forest';
     setCurrentTheme(savedTheme);
     document.documentElement.className = savedTheme;
   }, []);

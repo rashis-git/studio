@@ -5,7 +5,7 @@ import { useEffect } from 'react';
 
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
-    const savedTheme = localStorage.getItem('dayflow-theme') || 'theme-indigo';
+    const savedTheme = localStorage.getItem('dayflow-theme') || 'theme-forest';
     document.documentElement.className = savedTheme;
   }, []);
 
