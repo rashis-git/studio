@@ -15,6 +15,7 @@ import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/use-auth';
 import { db } from '@/lib/firebase';
 import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
+import { useSound } from '@/hooks/use-sound';
 
 type LoggedActivity = {
   activity: Activity;
@@ -39,7 +40,7 @@ const ActivityBubble = ({
   return (
     <button
       onClick={onClick}
-      className="flex flex-col items-center justify-center text-center transition-all duration-500 ease-in-out rounded-full shadow-lg bg-card text-card-foreground hover:scale-105 hover:shadow-xl focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2"
+      className="flex flex-col items-center justify-center text-center transition-all duration-300 ease-in-out rounded-full shadow-lg bg-gradient-to-br from-card to-muted/40 text-card-foreground hover:scale-105 hover:shadow-xl focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2"
       style={{
         width: `${size}px`,
         height: `${size}px`,
@@ -66,6 +67,7 @@ export default function LogTimePage() {
   const [isPending, startTransition] = useTransition();
   const { toast } = useToast();
   const { user } = useAuth();
+  const playSaveSound = useSound('/sounds/save.mp3');
 
   useEffect(() => {
     setIsClient(true);
@@ -109,14 +111,10 @@ export default function LogTimePage() {
   };
   
   const handleSaveLog = () => {
-    console.log('LogPage: handleSaveLog triggered.');
-
     if (!user) {
-      console.error('LogPage: handleSaveLog failed. User is not authenticated.');
       toast({ title: "Not authenticated", description: "You must be logged in to save.", variant: "destructive" });
       return;
     }
-    console.log('LogPage: User is authenticated. UID:', user.uid);
 
     const activitiesToSave = loggedActivities
       .filter(la => la.duration > 0)
@@ -130,7 +128,6 @@ export default function LogTimePage() {
       }));
       
     if(activitiesToSave.length === 0) {
-      console.warn('LogPage: No activities with duration > 0 to save.');
       toast({
         title: "No activities to save",
         description: "Please log time for at least one activity.",
@@ -138,8 +135,6 @@ export default function LogTimePage() {
       });
       return;
     }
-    
-    console.log('LogPage: Preparing to save activities. Data being sent:', activitiesToSave);
     
     startTransition(async () => {
       try {
@@ -149,7 +144,7 @@ export default function LogTimePage() {
 
         await Promise.all(activityPromises);
         
-        console.log('LogPage: Save successful. Displaying success toast.');
+        playSaveSound();
         toast({
           title: "Log Saved!",
           description: "Your activities have been saved.",
@@ -158,7 +153,6 @@ export default function LogTimePage() {
         setLoggedActivities(prev => prev.map(la => ({...la, duration: 0})));
 
       } catch (error: any) {
-        console.error('LogPage: Save failed. Displaying error toast. Error:', error);
         toast({
           title: "Error Saving Log",
           description: error.message || "An unknown error occurred.",
@@ -177,6 +171,7 @@ export default function LogTimePage() {
     startTransition(async () => {
         const result = await saveMoodToFirestore({ ...mood, userId: user.uid });
         if (result.success) {
+            playSaveSound();
             toast({
                 title: "Mood Saved!",
                 description: "Your mood has been logged.",

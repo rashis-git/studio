@@ -1,6 +1,7 @@
 
 'use client';
 
+import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
@@ -10,10 +11,32 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Input } from "@/components/ui/input";
 import { useAuth } from "@/hooks/use-auth";
 import { useRouter } from "next/navigation";
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
+import { Check } from 'lucide-react';
+
+const themes = [
+  { name: 'Indigo', value: 'theme-indigo' },
+  { name: 'Sunset', value: 'theme-sunset' },
+  { name: 'Forest', value: 'theme-forest' },
+  { name: 'Midnight', value: 'theme-midnight' },
+];
 
 export default function SettingsPage() {
   const { user, logout } = useAuth();
   const router = useRouter();
+  const [currentTheme, setCurrentTheme] = useState('theme-indigo');
+
+  useEffect(() => {
+    const savedTheme = localStorage.getItem('dayflow-theme') || 'theme-indigo';
+    setCurrentTheme(savedTheme);
+    document.documentElement.className = savedTheme;
+  }, []);
+
+  const handleThemeChange = (theme: string) => {
+    setCurrentTheme(theme);
+    document.documentElement.className = theme;
+    localStorage.setItem('dayflow-theme', theme);
+  };
 
   const handleLogout = async () => {
     await logout();
@@ -47,6 +70,33 @@ export default function SettingsPage() {
             <Label htmlFor="email">Email</Label>
             <Input id="email" type="email" value={user?.email ?? ""} readOnly />
           </div>
+        </CardContent>
+      </Card>
+      
+      <Card>
+        <CardHeader>
+          <CardTitle>Theme</CardTitle>
+          <CardDescription>Personalize the look and feel of the app.</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <RadioGroup value={currentTheme} onValueChange={handleThemeChange} className="grid grid-cols-2 gap-4">
+            {themes.map((theme) => (
+              <Label
+                key={theme.value}
+                htmlFor={theme.value}
+                className="flex flex-col items-center justify-center p-4 border rounded-lg cursor-pointer hover:bg-accent hover:text-accent-foreground data-[state=checked]:border-primary data-[state=checked]:ring-2 data-[state=checked]:ring-primary"
+              >
+                <RadioGroupItem value={theme.value} id={theme.value} className="sr-only" />
+                <div className="flex items-center justify-center w-full gap-2">
+                  <div className={`w-4 h-4 rounded-full bg-primary border`}></div>
+                  <div className={`w-4 h-4 rounded-full bg-secondary border`}></div>
+                  <div className={`w-4 h-4 rounded-full bg-accent border`}></div>
+                </div>
+                <span className="mt-2 text-sm font-medium">{theme.name}</span>
+                {currentTheme === theme.value && <Check className="absolute w-5 h-5 top-2 right-2 text-primary" />}
+              </Label>
+            ))}
+          </RadioGroup>
         </CardContent>
       </Card>
 

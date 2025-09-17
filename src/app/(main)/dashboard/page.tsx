@@ -1,11 +1,11 @@
 
 'use client';
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect } from 'react';
 import { useAuth } from '@/hooks/use-auth';
 import { db } from '@/lib/firebase';
 import { collection, query, where, getDocs } from 'firebase/firestore';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
 import { Loader2, AlertCircle, BarChart3 } from 'lucide-react';
 import { mockActivities } from '@/lib/data';
@@ -137,7 +137,7 @@ export default function DashboardPage() {
             {aggregatedData.map((activity, index) => {
                 const Icon = activity.icon;
                 return (
-                    <Card key={index} className="overflow-hidden">
+                    <Card key={index} className="overflow-hidden bg-gradient-to-br from-card to-muted/30">
                         <CardContent className="p-4">
                             <div className="flex items-center justify-between gap-4">
                                 <div className="flex items-center gap-4">
