@@ -23,8 +23,6 @@ const themes = [
   { name: 'Azure', value: 'theme-azure', colors: ['#6e85b7', '#F2DDC1', '#9FE2BF'] },
 ];
 
-type NotificationPermission = 'default' | 'granted' | 'denied';
-
 export default function SettingsPage() {
   const { user, logout } = useAuth();
   const router = useRouter();
@@ -33,44 +31,7 @@ export default function SettingsPage() {
   const [newTime, setNewTime] = useState('09:00');
   const [isLoading, setIsLoading] = useState(false);
   const [isNotificationsEnabled, setIsNotificationsEnabled] = useState(false);
-  const [notificationPermission, setNotificationPermission] = useState<NotificationPermission>('default');
   const { toast } = useToast();
-
-  const updateNotificationPermissionState = useCallback(() => {
-    if (typeof Notification !== 'undefined') {
-      setNotificationPermission(Notification.permission);
-    }
-  }, []);
-
-  useEffect(() => {
-    // Initial check
-    updateNotificationPermissionState();
-
-    // Listen for changes when the tab becomes visible
-    const handleVisibilityChange = () => {
-      if (document.visibilityState === 'visible') {
-        updateNotificationPermissionState();
-      }
-    };
-    document.addEventListener('visibilitychange', handleVisibilityChange);
-
-    // More advanced: listen for direct permission changes if browser supports it
-    let permissionStatus: PermissionStatus | undefined;
-    if (navigator.permissions) {
-      navigator.permissions.query({ name: 'notifications' }).then((status) => {
-        permissionStatus = status;
-        permissionStatus.onchange = updateNotificationPermissionState;
-      });
-    }
-
-    return () => {
-      document.removeEventListener('visibilitychange', handleVisibilityChange);
-      if (permissionStatus) {
-        permissionStatus.onchange = null;
-      }
-    };
-  }, [updateNotificationPermissionState]);
-
 
   useEffect(() => {
     // Theme
@@ -110,24 +71,24 @@ export default function SettingsPage() {
   };
   
   const handleNotificationToggle = async (enabled: boolean) => {
-    if (enabled && notificationPermission === 'denied') {
-        toast({ title: "Notifications Blocked", description: "Please enable notifications in your browser settings first.", variant: "destructive"});
-    }
-    
-    if (enabled && notificationPermission === 'default') {
-        const permission = await Notification.requestPermission();
-        updateNotificationPermissionState(); // Re-check permission right after request
-        if (permission !== 'granted') {
-            toast({ title: "Notifications Not Enabled", description: "You can enable notifications in your browser settings later.", variant: "destructive"});
-        }
-    }
-
     setIsNotificationsEnabled(enabled);
     localStorage.setItem('notifications-enabled', String(enabled));
-    if (enabled && notificationPermission === 'granted') {
-        toast({ title: "Notifications Enabled!", description: "You will receive reminders if browser permissions are granted."});
+
+    if (enabled && typeof Notification !== 'undefined' && Notification.permission === 'default') {
+      try {
+        const permission = await Notification.requestPermission();
+        if (permission === 'granted') {
+          toast({ title: "Notifications Enabled!", description: "You will receive reminders at your chosen times."});
+        } else {
+          toast({ title: "Notifications Not Enabled", description: "You can enable notifications in your browser settings later.", variant: "destructive"});
+        }
+      } catch (error) {
+        toast({ title: "Error", description: "Failed to request notification permissions.", variant: "destructive"});
+      }
+    } else if (enabled && typeof Notification !== 'undefined' && Notification.permission === 'granted') {
+      toast({ title: "Notifications Enabled!", description: "You will receive reminders at your chosen times."});
     } else if (!enabled) {
-        toast({ title: "Notifications Disabled", description: "You will no longer receive reminders."});
+      toast({ title: "Notifications Disabled", description: "You will no longer receive reminders."});
     }
   };
 
@@ -238,16 +199,6 @@ export default function SettingsPage() {
               onCheckedChange={handleNotificationToggle}
             />
           </div>
-          
-          {isNotificationsEnabled && notificationPermission === 'denied' && (
-            <Alert variant="destructive">
-              <AlertTitle>Permissions Blocked by Browser</AlertTitle>
-              <AlertDescription>
-                To receive notifications, you need to allow them in your browser settings for this site. Click the lock icon (🔒) in the address bar.
-              </AlertDescription>
-            </Alert>
-          )}
-
 
           {isNotificationsEnabled && (
             <div className="p-4 border-t">
@@ -287,3 +238,5 @@ export default function SettingsPage() {
     </div>
   );
 }
+
+    
