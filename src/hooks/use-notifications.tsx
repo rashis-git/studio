@@ -46,12 +46,10 @@ export const useNotifications = () => {
     
     const startNotificationChecker = (times: string[]) => {
         // This function runs every 30 seconds to check if a notification should be fired.
-        // This is more robust than a single large setTimeout, especially across timezones.
         intervalRef.current = setInterval(() => {
             const now = new Date();
             const currentTime = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
             
-            // Check if the current time matches any of the user's preferred times
             if (times.includes(currentTime)) {
                 // To avoid firing multiple notifications in the same minute,
                 // we check if we've already fired for this specific time.
@@ -65,7 +63,6 @@ export const useNotifications = () => {
                 }
             } else {
                 // If the current time doesn't match any target time, reset the last fired ref
-                // This ensures that if the user sets a notification for the *next* minute, it will fire.
                 if (lastFiredRef.current !== null) {
                     lastFiredRef.current = null;
                 }

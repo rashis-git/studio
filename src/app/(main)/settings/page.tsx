@@ -218,7 +218,7 @@ export default function SettingsPage() {
 
       <div className="pt-4 text-center space-y-4">
         <Button size="lg" onClick={handleSaveNotificationPrefs} disabled={isLoading}>
-          {isLoading && <Loader2 className="animate-spin" />}
+          {isLoading && <Loader2 className="animate-spin mr-2" />}
           Save Changes
         </Button>
         <Button size="lg" variant="destructive" onClick={handleLogout}>Sign Out</Button>
