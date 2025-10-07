@@ -11,16 +11,19 @@ import { Input } from "@/components/ui/input";
 import { useAuth } from "@/hooks/use-auth";
 import { useRouter } from "next/navigation";
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
-import { Check, X, PlusCircle, Loader2 } from 'lucide-react';
+import { Check, X, PlusCircle, Loader2, AlertTriangle } from 'lucide-react';
 import { db } from '@/lib/firebase';
 import { doc, getDoc, setDoc } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 
 const themes = [
   { name: 'Forest', value: 'theme-forest' },
   { name: 'Sunset', value: 'theme-sunset' },
   { name: 'Azure', value: 'theme-azure' },
 ];
+
+type NotificationPermission = 'default' | 'granted' | 'denied';
 
 export default function SettingsPage() {
   const { user, logout } = useAuth();
@@ -30,6 +33,7 @@ export default function SettingsPage() {
   const [newTime, setNewTime] = useState('09:00');
   const [isLoading, setIsLoading] = useState(false);
   const [isNotificationsEnabled, setIsNotificationsEnabled] = useState(false);
+  const [notificationPermission, setNotificationPermission] = useState<NotificationPermission>('default');
   const { toast } = useToast();
 
   useEffect(() => {
@@ -38,7 +42,12 @@ export default function SettingsPage() {
     setCurrentTheme(savedTheme);
     document.documentElement.className = savedTheme;
 
-    // Notifications
+    // Notification Permission State
+    if ('permission' in Notification) {
+      setNotificationPermission(Notification.permission);
+    }
+    
+    // Notifications Enabled Toggle
     const enabled = localStorage.getItem('notifications-enabled') === 'true';
     setIsNotificationsEnabled(enabled);
 
@@ -50,7 +59,6 @@ export default function SettingsPage() {
         if (docSnap.exists()) {
           setNotificationTimes(docSnap.data().times || []);
         } else {
-          // If the document doesn't exist, create it. This can happen on first load.
           try {
             await setDoc(docRef, { userId: user.uid, times: [] });
           } catch (e) {
@@ -72,8 +80,9 @@ export default function SettingsPage() {
     setIsNotificationsEnabled(enabled);
     localStorage.setItem('notifications-enabled', String(enabled));
 
-    if (enabled && Notification.permission === 'default') {
+    if (enabled && notificationPermission === 'default') {
       Notification.requestPermission().then(permission => {
+        setNotificationPermission(permission); // Update state with the user's choice
         if (permission === 'granted') {
           toast({ title: "Notifications Enabled!", description: "You will now receive reminders."});
         } else {
@@ -82,6 +91,11 @@ export default function SettingsPage() {
           localStorage.setItem('notifications-enabled', 'false');
         }
       });
+    } else if (enabled && notificationPermission === 'denied') {
+        // If permission is already denied, just show the toast.
+        toast({ title: "Notifications Blocked", description: "Please enable notifications in your browser settings.", variant: "destructive"});
+        setIsNotificationsEnabled(false);
+        localStorage.setItem('notifications-enabled', 'false');
     }
   };
 
@@ -182,13 +196,30 @@ export default function SettingsPage() {
           <CardDescription>Choose when to be reminded to log your day.</CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
+           {notificationPermission === 'denied' && (
+            <Alert variant="destructive">
+              <AlertTriangle className="w-4 h-4" />
+              <AlertTitle>Permissions Denied</AlertTitle>
+              <AlertDescription>
+                You have blocked notifications for this site. To receive reminders, you must
+                enable them in your browser settings (usually by clicking the lock icon in the address bar).
+              </AlertDescription>
+            </Alert>
+          )}
+
           <div className="flex items-center justify-between p-4 border rounded-lg">
             <Label htmlFor="notifications-enabled" className="text-base">
               Enable Notifications
             </Label>
-            <Switch id="notifications-enabled" checked={isNotificationsEnabled} onCheckedChange={handleNotificationToggle} />
+            <Switch 
+              id="notifications-enabled" 
+              checked={isNotificationsEnabled} 
+              onCheckedChange={handleNotificationToggle}
+              disabled={notificationPermission === 'denied'}
+            />
           </div>
-          {isNotificationsEnabled && (
+
+          {(isNotificationsEnabled && notificationPermission === 'granted') && (
             <div className="space-y-4">
                 <Label>Reminder times</Label>
                 <div className="flex items-center gap-2">
