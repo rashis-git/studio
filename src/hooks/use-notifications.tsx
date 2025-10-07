@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import { useEffect, useRef } from 'react';
@@ -87,10 +88,17 @@ export const useNotifications = () => {
                 // we check if we've already fired for this specific time.
                 if (lastFiredRef.current !== currentTime) {
                     console.log(`[Debug] FIRING NOTIFICATION for ${currentTime}.`);
-                    new Notification('DayFlow Reminder', {
+                    const notification = new Notification('DayFlow Reminder', {
                         body: "Don't forget to log your activities for the day!",
                         icon: '/logo.svg',
+                        tag: 'dayflow-reminder' // Use a tag to prevent multiple notifications if the interval fires quickly
                     });
+
+                    notification.onclick = (event) => {
+                      event.preventDefault(); // Prevent the browser from focusing the Notification's tab
+                      window.open('/', '_self');
+                    };
+                    
                     lastFiredRef.current = currentTime;
                 } else {
                     console.log(`[Debug] Already fired for ${currentTime}, skipping.`);
