@@ -74,7 +74,12 @@ export const useNotifications = () => {
             const now = new Date();
             const currentTime = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
             
-            console.log(`[Debug] Checking time... Current: ${currentTime}`);
+            // New enhanced logging
+            console.log('--- Time Check ---');
+            console.log(`[Timezone Debug] Browser's full local time: ${now.toString()}`);
+            console.log(`[Timezone Debug] Extracted "HH:mm" for comparison: "${currentTime}"`);
+            console.log(`[Timezone Debug] Checking against saved times: ${JSON.stringify(times)}`);
+            // ---
 
             if (times.includes(currentTime)) {
                 console.log(`[Debug] TIME MATCH: ${currentTime}.`);
@@ -91,8 +96,6 @@ export const useNotifications = () => {
                     console.log(`[Debug] Already fired for ${currentTime}, skipping.`);
                 }
             } else {
-                // If the current time doesn't match any target time, reset the last fired ref
-                // This allows a notification for a past time to fire again on another day.
                 if (lastFiredRef.current !== null && !times.includes(lastFiredRef.current)) {
                    console.log(`[Debug] Resetting lastFiredRef from ${lastFiredRef.current}.`);
                    lastFiredRef.current = null;
