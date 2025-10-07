@@ -36,7 +36,7 @@ export default function SettingsPage() {
   const { toast } = useToast();
 
   const updateNotificationPermissionState = useCallback(() => {
-    if ('permission' in Notification) {
+    if (typeof Notification !== 'undefined') {
       setNotificationPermission(Notification.permission);
     }
   }, []);
@@ -111,23 +111,21 @@ export default function SettingsPage() {
   const handleNotificationToggle = async (enabled: boolean) => {
     if (enabled && notificationPermission === 'denied') {
         toast({ title: "Notifications Blocked", description: "Please enable notifications in your browser settings first.", variant: "destructive"});
-        // Allow toggle to be enabled anyway, but it won't work.
     }
     
     if (enabled && notificationPermission === 'default') {
         const permission = await Notification.requestPermission();
-        setNotificationPermission(permission); // Update state immediately
+        updateNotificationPermissionState(); // Re-check permission right after request
         if (permission !== 'granted') {
             toast({ title: "Notifications Not Enabled", description: "You can enable notifications in your browser settings later.", variant: "destructive"});
-            // Don't return, allow toggle to be enabled.
         }
     }
 
     setIsNotificationsEnabled(enabled);
     localStorage.setItem('notifications-enabled', String(enabled));
-    if (enabled) {
+    if (enabled && notificationPermission === 'granted') {
         toast({ title: "Notifications Enabled!", description: "You will receive reminders if browser permissions are granted."});
-    } else {
+    } else if (!enabled) {
         toast({ title: "Notifications Disabled", description: "You will no longer receive reminders."});
     }
   };
@@ -278,3 +276,5 @@ export default function SettingsPage() {
     </div>
   );
 }
+
+    
