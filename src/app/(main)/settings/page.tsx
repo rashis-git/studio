@@ -11,11 +11,10 @@ import { Input } from "@/components/ui/input";
 import { useAuth } from "@/hooks/use-auth";
 import { useRouter } from "next/navigation";
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
-import { Check, X, PlusCircle, Loader2, AlertTriangle } from 'lucide-react';
+import { Check, X, PlusCircle, Loader2 } from 'lucide-react';
 import { db } from '@/lib/firebase';
 import { doc, getDoc, setDoc } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
-import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 
 const themes = [
   { name: 'Forest', value: 'theme-forest' },
@@ -112,7 +111,7 @@ export default function SettingsPage() {
   const handleNotificationToggle = async (enabled: boolean) => {
     if (enabled && notificationPermission === 'denied') {
         toast({ title: "Notifications Blocked", description: "Please enable notifications in your browser settings first.", variant: "destructive"});
-        return;
+        // Allow toggle to be enabled anyway, but it won't work.
     }
     
     if (enabled && notificationPermission === 'default') {
@@ -120,14 +119,14 @@ export default function SettingsPage() {
         setNotificationPermission(permission); // Update state immediately
         if (permission !== 'granted') {
             toast({ title: "Notifications Not Enabled", description: "You can enable notifications in your browser settings later.", variant: "destructive"});
-            return; // Don't enable the toggle if permission wasn't granted
+            // Don't return, allow toggle to be enabled.
         }
     }
 
     setIsNotificationsEnabled(enabled);
     localStorage.setItem('notifications-enabled', String(enabled));
     if (enabled) {
-        toast({ title: "Notifications Enabled!", description: "You will now receive reminders."});
+        toast({ title: "Notifications Enabled!", description: "You will receive reminders if browser permissions are granted."});
     } else {
         toast({ title: "Notifications Disabled", description: "You will no longer receive reminders."});
     }
@@ -230,17 +229,6 @@ export default function SettingsPage() {
           <CardDescription>Choose when to be reminded to log your day.</CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
-           {notificationPermission === 'denied' && (
-            <Alert variant="destructive">
-              <AlertTriangle className="w-4 h-4" />
-              <AlertTitle>Permissions Blocked by Browser</AlertTitle>
-              <AlertDescription>
-                You have blocked notifications. To receive reminders, you must
-                enable them in your browser settings (usually by clicking the lock icon in the address bar) and then reload this page.
-              </AlertDescription>
-            </Alert>
-          )}
-
           <div className="flex items-center justify-between p-4 border rounded-lg">
             <Label htmlFor="notifications-enabled" className="text-base font-medium">
               Enable Notifications
@@ -249,11 +237,10 @@ export default function SettingsPage() {
               id="notifications-enabled" 
               checked={isNotificationsEnabled} 
               onCheckedChange={handleNotificationToggle}
-              disabled={notificationPermission === 'denied'}
             />
           </div>
 
-          {(isNotificationsEnabled && notificationPermission === 'granted') && (
+          {isNotificationsEnabled && (
             <div className="p-4 border-t">
                 <Label className="font-semibold">Reminder times</Label>
                 <div className="flex items-center gap-2 mt-2">
