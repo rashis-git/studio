@@ -40,7 +40,7 @@ export default function SettingsPage() {
     if (typeof Notification !== 'undefined') {
       setNotificationPermission(Notification.permission);
     }
-  }, [setNotificationPermission]);
+  }, []);
 
   useEffect(() => {
     // Initial check
@@ -236,21 +236,20 @@ export default function SettingsPage() {
               id="notifications-enabled" 
               checked={isNotificationsEnabled} 
               onCheckedChange={handleNotificationToggle}
-              disabled={notificationPermission === 'denied'}
             />
           </div>
           
-          {notificationPermission === 'denied' && (
+          {isNotificationsEnabled && notificationPermission === 'denied' && (
             <Alert variant="destructive">
               <AlertTitle>Permissions Blocked by Browser</AlertTitle>
               <AlertDescription>
-                To enable notifications, you need to allow them in your browser settings for this site. Click the lock icon (🔒) in the address bar.
+                To receive notifications, you need to allow them in your browser settings for this site. Click the lock icon (🔒) in the address bar.
               </AlertDescription>
             </Alert>
           )}
 
 
-          {isNotificationsEnabled && notificationPermission === 'granted' && (
+          {isNotificationsEnabled && (
             <div className="p-4 border-t">
                 <Label className="font-semibold">Reminder times</Label>
                 <div className="flex items-center gap-2 mt-2">
@@ -288,5 +287,3 @@ export default function SettingsPage() {
     </div>
   );
 }
-
-    
