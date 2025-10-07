@@ -10,7 +10,6 @@ import { Bar, BarChart, XAxis, YAxis, Tooltip, Legend, ResponsiveContainer, Cart
 import { Loader2, AlertCircle, BarChart3 } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { startOfWeek, endOfWeek, format, eachDayOfInterval, getDay } from 'date-fns';
-import { mockActivities } from '@/lib/data';
 
 interface ActivityLog {
   activityName: string;
@@ -18,14 +17,20 @@ interface ActivityLog {
   date: string; // YYYY-MM-DD
 }
 
+const distinctColors: string[] = [
+  'hsl(210, 80%, 60%)', 'hsl(145, 70%, 55%)', 'hsl(35, 90%, 65%)', 'hsl(340, 85%, 60%)', 'hsl(260, 75%, 65%)',
+  'hsl(50, 95%, 60%)', 'hsl(190, 75%, 50%)', 'hsl(310, 60%, 60%)', 'hsl(95, 60%, 55%)', 'hsl(0, 80%, 65%)',
+  'hsl(230, 85%, 70%)', 'hsl(120, 50%, 60%)', 'hsl(20, 85%, 60%)', 'hsl(290, 70%, 70%)', 'hsl(170, 70%, 50%)',
+  'hsl(70, 80%, 60%)', 'hsl(350, 80%, 70%)', 'hsl(245, 65%, 65%)', 'hsl(10, 70%, 60%)', 'hsl(160, 80%, 50%)',
+  'hsl(275, 70%, 65%)', 'hsl(85, 70%, 55%)', 'hsl(200, 90%, 60%)', 'hsl(325, 75%, 65%)', 'hsl(135, 60%, 50%)',
+  'hsl(25, 80%, 60%)', 'hsl(220, 70%, 70%)', 'hsl(5, 75%, 65%)', 'hsl(180, 65%, 55%)', 'hsl(40, 85%, 60%)',
+];
+
 const getActivityColor = (activityName: string) => {
-    const activity = mockActivities.find(a => a.name === activityName);
-    if (activity) {
-        // Simple hash function for consistent color generation from activity name
-        const colorHash = activity.name.split('').reduce((acc, char) => char.charCodeAt(0) + ((acc << 5) - acc), 0);
-        return `hsl(${colorHash % 360}, 70%, 60%)`;
-    }
-    return '#8884d8'; // Default color
+    // Generate a consistent hash for the activity name
+    const hash = activityName.split('').reduce((acc, char) => char.charCodeAt(0) + ((acc << 5) - acc), 0);
+    const index = Math.abs(hash % distinctColors.length);
+    return distinctColors[index];
 };
 
 export default function AnalysisPage() {
