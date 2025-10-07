@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
@@ -36,17 +36,48 @@ export default function SettingsPage() {
   const [notificationPermission, setNotificationPermission] = useState<NotificationPermission>('default');
   const { toast } = useToast();
 
+  const updateNotificationPermissionState = useCallback(() => {
+    if ('permission' in Notification) {
+      setNotificationPermission(Notification.permission);
+    }
+  }, []);
+
+  useEffect(() => {
+    // Initial check
+    updateNotificationPermissionState();
+
+    // Listen for changes when the tab becomes visible
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        updateNotificationPermissionState();
+      }
+    };
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+
+    // More advanced: listen for direct permission changes if browser supports it
+    let permissionStatus: PermissionStatus | undefined;
+    if (navigator.permissions) {
+      navigator.permissions.query({ name: 'notifications' }).then((status) => {
+        permissionStatus = status;
+        permissionStatus.onchange = updateNotificationPermissionState;
+      });
+    }
+
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      if (permissionStatus) {
+        permissionStatus.onchange = null;
+      }
+    };
+  }, [updateNotificationPermissionState]);
+
+
   useEffect(() => {
     // Theme
     const savedTheme = localStorage.getItem('dayflow-theme') || 'theme-forest';
     setCurrentTheme(savedTheme);
     document.documentElement.className = savedTheme;
 
-    // Notification Permission State
-    if ('permission' in Notification) {
-      setNotificationPermission(Notification.permission);
-    }
-    
     // Notifications Enabled Toggle
     const enabled = localStorage.getItem('notifications-enabled') === 'true';
     setIsNotificationsEnabled(enabled);
@@ -55,20 +86,22 @@ export default function SettingsPage() {
     const fetchTimes = async () => {
       if (user) {
         const docRef = doc(db, 'notification-preferences', user.uid);
-        const docSnap = await getDoc(docRef);
-        if (docSnap.exists()) {
-          setNotificationTimes(docSnap.data().times || []);
-        } else {
-          try {
+        try {
+          const docSnap = await getDoc(docRef);
+          if (docSnap.exists()) {
+            setNotificationTimes(docSnap.data().times || []);
+          } else {
+            // Attempt to create the doc if it doesn't exist.
             await setDoc(docRef, { userId: user.uid, times: [] });
-          } catch (e) {
-            console.error("Could not create notification preferences doc:", e);
           }
+        } catch (e) {
+            console.error("Could not fetch or create notification preferences doc:", e);
+            toast({ title: "Error", description: "Could not load notification settings.", variant: "destructive"});
         }
       }
     };
     fetchTimes();
-  }, [user]);
+  }, [user, toast]);
 
   const handleThemeChange = (theme: string) => {
     setCurrentTheme(theme);
@@ -76,26 +109,27 @@ export default function SettingsPage() {
     localStorage.setItem('dayflow-theme', theme);
   };
   
-  const handleNotificationToggle = (enabled: boolean) => {
+  const handleNotificationToggle = async (enabled: boolean) => {
+    if (enabled && notificationPermission === 'denied') {
+        toast({ title: "Notifications Blocked", description: "Please enable notifications in your browser settings first.", variant: "destructive"});
+        return;
+    }
+    
+    if (enabled && notificationPermission === 'default') {
+        const permission = await Notification.requestPermission();
+        setNotificationPermission(permission); // Update state immediately
+        if (permission !== 'granted') {
+            toast({ title: "Notifications Not Enabled", description: "You can enable notifications in your browser settings later.", variant: "destructive"});
+            return; // Don't enable the toggle if permission wasn't granted
+        }
+    }
+
     setIsNotificationsEnabled(enabled);
     localStorage.setItem('notifications-enabled', String(enabled));
-
-    if (enabled && notificationPermission === 'default') {
-      Notification.requestPermission().then(permission => {
-        setNotificationPermission(permission); // Update state with the user's choice
-        if (permission === 'granted') {
-          toast({ title: "Notifications Enabled!", description: "You will now receive reminders."});
-        } else {
-          toast({ title: "Notifications Blocked", description: "You can enable notifications in your browser settings.", variant: "destructive"});
-          setIsNotificationsEnabled(false); // Revert toggle if permission is denied
-          localStorage.setItem('notifications-enabled', 'false');
-        }
-      });
-    } else if (enabled && notificationPermission === 'denied') {
-        // If permission is already denied, just show the toast.
-        toast({ title: "Notifications Blocked", description: "Please enable notifications in your browser settings.", variant: "destructive"});
-        setIsNotificationsEnabled(false);
-        localStorage.setItem('notifications-enabled', 'false');
+    if (enabled) {
+        toast({ title: "Notifications Enabled!", description: "You will now receive reminders."});
+    } else {
+        toast({ title: "Notifications Disabled", description: "You will no longer receive reminders."});
     }
   };
 
@@ -123,7 +157,7 @@ export default function SettingsPage() {
     setIsLoading(true);
     try {
         const docRef = doc(db, 'notification-preferences', user.uid);
-        await setDoc(docRef, { userId: user.uid, times: notificationTimes });
+        await setDoc(docRef, { userId: user.uid, times: notificationTimes }, { merge: true });
         
         toast({ title: "Preferences Saved!", description: "Your notification settings have been updated."});
     } catch(e: any) {
@@ -199,16 +233,16 @@ export default function SettingsPage() {
            {notificationPermission === 'denied' && (
             <Alert variant="destructive">
               <AlertTriangle className="w-4 h-4" />
-              <AlertTitle>Permissions Denied</AlertTitle>
+              <AlertTitle>Permissions Blocked by Browser</AlertTitle>
               <AlertDescription>
-                You have blocked notifications for this site. To receive reminders, you must
-                enable them in your browser settings (usually by clicking the lock icon in the address bar).
+                You have blocked notifications. To receive reminders, you must
+                enable them in your browser settings (usually by clicking the lock icon in the address bar) and then reload this page.
               </AlertDescription>
             </Alert>
           )}
 
           <div className="flex items-center justify-between p-4 border rounded-lg">
-            <Label htmlFor="notifications-enabled" className="text-base">
+            <Label htmlFor="notifications-enabled" className="text-base font-medium">
               Enable Notifications
             </Label>
             <Switch 
@@ -220,26 +254,26 @@ export default function SettingsPage() {
           </div>
 
           {(isNotificationsEnabled && notificationPermission === 'granted') && (
-            <div className="space-y-4">
-                <Label>Reminder times</Label>
-                <div className="flex items-center gap-2">
+            <div className="p-4 border-t">
+                <Label className="font-semibold">Reminder times</Label>
+                <div className="flex items-center gap-2 mt-2">
                     <Input type="time" value={newTime} onChange={(e) => setNewTime(e.target.value)} className="flex-1"/>
                     <Button variant="outline" size="icon" onClick={handleAddTime} aria-label="Add time">
                         <PlusCircle />
                     </Button>
                 </div>
-                <div className="space-y-2">
+                <div className="mt-4 space-y-2">
                     {notificationTimes.length > 0 ? (
                         notificationTimes.map(time => (
                             <div key={time} className="flex items-center justify-between p-2 rounded-md bg-muted/50">
-                                <span className="font-mono">{time}</span>
+                                <span className="font-mono text-sm">{time}</span>
                                 <Button variant="ghost" size="icon" className="w-6 h-6 text-muted-foreground" onClick={() => handleRemoveTime(time)} aria-label={`Remove ${time}`}>
                                     <X className="w-4 h-4" />
                                 </Button>
                             </div>
                         ))
                     ) : (
-                        <p className="text-sm text-center text-muted-foreground">No reminder times set.</p>
+                        <p className="text-sm text-center text-muted-foreground py-4">No reminder times set.</p>
                     )}
                 </div>
             </div>
