@@ -15,11 +15,12 @@ import { Check, X, PlusCircle, Loader2 } from 'lucide-react';
 import { db } from '@/lib/firebase';
 import { doc, getDoc, setDoc } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
+import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
 
 const themes = [
-  { name: 'Forest', value: 'theme-forest' },
-  { name: 'Sunset', value: 'theme-sunset' },
-  { name: 'Azure', value: 'theme-azure' },
+  { name: 'Forest', value: 'theme-forest', colors: ['#2F5D62', '#A77B5A', '#5E8C61'] },
+  { name: 'Sunset', value: 'theme-sunset', colors: ['#FF8C42', '#FFA69E', '#FFD000'] },
+  { name: 'Azure', value: 'theme-azure', colors: ['#6e85b7', '#F2DDC1', '#9FE2BF'] },
 ];
 
 type NotificationPermission = 'default' | 'granted' | 'denied';
@@ -39,7 +40,7 @@ export default function SettingsPage() {
     if (typeof Notification !== 'undefined') {
       setNotificationPermission(Notification.permission);
     }
-  }, []);
+  }, [setNotificationPermission]);
 
   useEffect(() => {
     // Initial check
@@ -209,9 +210,9 @@ export default function SettingsPage() {
               >
                 <RadioGroupItem value={theme.value} id={theme.value} className="sr-only" />
                 <div className="flex items-center justify-center w-full gap-2">
-                  <div className={`w-4 h-4 rounded-full bg-primary border`}></div>
-                  <div className={`w-4 h-4 rounded-full bg-secondary border`.trim()} ></div>
-                  <div className={`w-4 h-4 rounded-full bg-accent border`}></div>
+                  <div className="w-4 h-4 rounded-full border" style={{ backgroundColor: theme.colors[0] }}></div>
+                  <div className="w-4 h-4 rounded-full border" style={{ backgroundColor: theme.colors[1] }}></div>
+                  <div className="w-4 h-4 rounded-full border" style={{ backgroundColor: theme.colors[2] }}></div>
                 </div>
                 <span className="mt-2 text-sm font-medium">{theme.name}</span>
                 {currentTheme === theme.value && <Check className="absolute w-5 h-5 top-2 right-2 text-primary" />}
@@ -235,10 +236,21 @@ export default function SettingsPage() {
               id="notifications-enabled" 
               checked={isNotificationsEnabled} 
               onCheckedChange={handleNotificationToggle}
+              disabled={notificationPermission === 'denied'}
             />
           </div>
+          
+          {notificationPermission === 'denied' && (
+            <Alert variant="destructive">
+              <AlertTitle>Permissions Blocked by Browser</AlertTitle>
+              <AlertDescription>
+                To enable notifications, you need to allow them in your browser settings for this site. Click the lock icon (🔒) in the address bar.
+              </AlertDescription>
+            </Alert>
+          )}
 
-          {isNotificationsEnabled && (
+
+          {isNotificationsEnabled && notificationPermission === 'granted' && (
             <div className="p-4 border-t">
                 <Label className="font-semibold">Reminder times</Label>
                 <div className="flex items-center gap-2 mt-2">
