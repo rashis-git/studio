@@ -50,6 +50,7 @@ export const AuthProvider: FC<{ children: ReactNode }> = ({ children }) => {
         
         if (result) {
           console.log('AuthProvider: 3. SUCCESS: Google redirect result FOUND for user:', result.user.uid);
+          // The onAuthStateChanged listener below will handle setting the user.
         } else {
           console.log('AuthProvider: 3. No redirect result found. This is normal on initial load.');
         }
