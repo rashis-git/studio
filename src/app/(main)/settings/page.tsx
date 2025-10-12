@@ -130,55 +130,6 @@ export default function SettingsPage() {
             
             toast({ title: "Preferences Saved!", description: "Your notification settings have been updated."});
 
-            // If user signed in with Google, create calendar events
-            const isGoogleUser = user.providerData.some(provider => provider.providerId === 'google.com');
-            if (isGoogleUser) {
-                const firebaseAuth = getAuth();
-                const currentUser = firebaseAuth.currentUser;
-                if (!currentUser) return;
-                
-                const idTokenResult = await currentUser.getIdTokenResult();
-                // This is a simplified way to get an access token. In a real app, you might need a more robust refresh token flow.
-                // We assume the user has recently logged in and the token is valid.
-                // Firebase doesn't directly expose the OAuth access token on the client.
-                // A common pattern is to handle this on the backend after passing the ID token.
-                // For this example, we will assume we have a way to get it, but will mock it.
-                // To make this work for real, you'd need a backend function that swaps the ID token for an access token.
-                const userAccessToken = idTokenResult.token; // This is an ID token, not an access token.
-
-                toast({ title: "Creating Calendar Events", description: "Please wait..."});
-
-                for (const time of notificationTimes) {
-                    const [hours, minutes] = time.split(':').map(Number);
-                    const today = new Date();
-                    const startTime = new Date(today.getFullYear(), today.getMonth(), today.getDate(), hours, minutes + 10);
-                    const endTime = new Date(startTime.getTime() + 30 * 60 * 1000); // 30 min duration
-                    
-                    try {
-                        // This call will fail because we don't have a real access token.
-                        // This illustrates the client-side call to the server-side flow.
-                        await createCalendarEvent({
-                            // NOTE: This is NOT a real access token. This flow will fail here.
-                            // A secure implementation requires a backend function to exchange the Firebase ID token for a Google OAuth Access Token.
-                            userAccessToken: "mock-access-token-requires-backend-setup",
-                            userEmail: user.email!,
-                            startTime: startTime.toISOString(),
-                            endTime: endTime.toISOString(),
-                            appUrl: window.location.origin,
-                        });
-                    } catch (e: any) {
-                         console.error("Failed to create calendar event:", e.message);
-                         toast({
-                            title: "Calendar Event Failed",
-                            description: "Could not create calendar event. This feature requires further backend configuration to securely handle Google API access tokens.",
-                            variant: "destructive",
-                            duration: 10000,
-                        });
-                    }
-                }
-                toast({ title: "Calendar Sync Complete", description: "Checked calendar events." });
-            }
-
         } catch(e: any) {
             toast({ title: "Error", description: e.message || "Failed to save preferences.", variant: "destructive"});
         }
