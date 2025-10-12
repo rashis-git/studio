@@ -41,9 +41,10 @@ export default function MainLayout({
         console.log('MainLayout: Auth state confirmed for user:', user.uid);
         const userDocRef = doc(db, 'users', user.uid);
         try {
+          console.log('MainLayout: Checking for user document in Firestore...');
           const userDocSnap = await getDoc(userDocRef);
           if (!userDocSnap.exists()) {
-            console.log('MainLayout: User document not found in Firestore. Creating on client...');
+            console.log('MainLayout: User document not found. Creating now...');
             await setDoc(userDocRef, {
               email: user.email,
               displayName: user.displayName,
@@ -56,13 +57,13 @@ export default function MainLayout({
               description: "Your user profile has been saved in the database.",
             });
           } else {
-            console.log('MainLayout: User document already exists in Firestore.');
+            console.log('MainLayout: User document already exists in Firestore. No action taken.');
           }
         } catch (error: any) {
           console.error('MainLayout: Error checking/creating user document:', error);
           toast({
             title: "Database Error",
-            description: `Could not create user profile: ${error.message}`,
+            description: `Could not create or verify user profile: ${error.message}`,
             variant: "destructive",
           });
         }

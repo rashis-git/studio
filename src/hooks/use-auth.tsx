@@ -40,37 +40,34 @@ export const AuthProvider: FC<{ children: ReactNode }> = ({ children }) => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // This function now orchestrates the entire auth state loading process.
+    console.log('AuthProvider: useEffect started.');
+
     const handleAuthChange = async () => {
+      console.log('AuthProvider: 1. Inside handleAuthChange async function.');
       try {
-        // Step 1: Explicitly wait for any redirect result. This is crucial.
-        console.log('AuthProvider: Checking for redirect result...');
+        console.log('AuthProvider: 2. Checking for redirect result...');
         const result = await getRedirectResult(auth);
         
         if (result) {
-          // If there was a redirect, this block will run, but the onAuthStateChanged
-          // listener below will be the single source of truth for setting the user.
-          console.log('AuthProvider: Google redirect result found for user:', result.user.uid);
+          console.log('AuthProvider: 3. SUCCESS: Google redirect result FOUND for user:', result.user.uid);
         } else {
-          console.log('AuthProvider: No redirect result.');
+          console.log('AuthProvider: 3. No redirect result found. This is normal on initial load.');
         }
       } catch (error) {
-        console.error("AuthProvider: Error processing redirect result", error);
+        console.error("AuthProvider: 3. ERROR processing redirect result", error);
       }
 
-      // Step 2: Set up the definitive state listener. This will fire after the redirect
-      // is processed, giving us the final, stable user state.
+      console.log('AuthProvider: 4. Setting up onAuthStateChanged listener.');
       const unsubscribe = onAuthStateChanged(auth, (user) => {
         if (user) {
-          console.log('onAuthStateChanged: User is signed in. UID:', user.uid);
+          console.log('AuthProvider: 5. onAuthStateChanged FIRED: User is SIGNED IN. UID:', user.uid);
           setUser(user);
         } else {
-          console.log('onAuthStateChanged: User is signed out.');
+          console.log('AuthProvider: 5. onAuthStateChanged FIRED: User is SIGNED OUT.');
           setUser(null);
         }
-        // Step 3: Only set loading to false here, after everything is resolved.
+        console.log('AuthProvider: 6. Auth state resolved, setting loading to false.');
         setLoading(false); 
-        console.log('onAuthStateChanged: Auth state resolved, loading set to false.');
       });
 
       return unsubscribe;
@@ -78,7 +75,6 @@ export const AuthProvider: FC<{ children: ReactNode }> = ({ children }) => {
     
     const unsubscribePromise = handleAuthChange();
 
-    // Cleanup function to unsubscribe from the listener on component unmount
     return () => {
       unsubscribePromise.then(unsub => {
         if (unsub) {
@@ -94,12 +90,11 @@ export const AuthProvider: FC<{ children: ReactNode }> = ({ children }) => {
   };
   
   const loginWithGoogle = async () => {
-    setLoading(true); // Set loading to true before redirect
+    console.log('AuthProvider: loginWithGoogle called. Setting loading state and redirecting.');
+    setLoading(true);
     const provider = new GoogleAuthProvider();
     provider.addScope('https://www.googleapis.com/auth/calendar.events');
     await signInWithRedirect(auth, provider);
-    // The code execution will stop here because of the redirect.
-    // The result is handled when the user is redirected back to the app by the useEffect hook.
   };
 
   const signup = (email: string, pass: string) => {
