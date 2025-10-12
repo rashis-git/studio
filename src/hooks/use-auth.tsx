@@ -17,6 +17,8 @@ import {
   createUserWithEmailAndPassword,
   sendPasswordResetEmail,
   UserCredential,
+  GoogleAuthProvider,
+  signInWithPopup,
 } from 'firebase/auth';
 import { auth } from '@/lib/firebase';
 
@@ -24,6 +26,7 @@ interface AuthContextType {
   user: User | null;
   loading: boolean;
   login: (email: string, pass:string) => Promise<UserCredential>;
+  loginWithGoogle: () => Promise<UserCredential>;
   logout: () => Promise<void>;
   signup: (email: string, pass: string) => Promise<UserCredential>;
   sendPasswordReset: (email: string) => Promise<void>;
@@ -57,6 +60,12 @@ export const AuthProvider: FC<{ children: ReactNode }> = ({ children }) => {
   const login = (email: string, pass: string) => {
     return signInWithEmailAndPassword(auth, email, pass);
   };
+  
+  const loginWithGoogle = () => {
+    const provider = new GoogleAuthProvider();
+    provider.addScope('https://www.googleapis.com/auth/calendar.events');
+    return signInWithPopup(auth, provider);
+  };
 
   const signup = (email: string, pass: string) => {
     return createUserWithEmailAndPassword(auth, email, pass);
@@ -74,6 +83,7 @@ export const AuthProvider: FC<{ children: ReactNode }> = ({ children }) => {
     user,
     loading,
     login,
+    loginWithGoogle,
     logout,
     signup,
     sendPasswordReset,
