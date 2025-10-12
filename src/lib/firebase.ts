@@ -1,4 +1,5 @@
 
+
 import { initializeApp, getApps, getApp, FirebaseApp } from 'firebase/app';
 import { getFirestore } from 'firebase/firestore';
 import { getAuth, browserSessionPersistence, setPersistence } from 'firebase/auth';
@@ -35,3 +36,4 @@ setPersistence(auth, browserSessionPersistence)
 
 
 export { app, db, auth };
+
