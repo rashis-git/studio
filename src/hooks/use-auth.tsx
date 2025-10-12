@@ -52,17 +52,21 @@ export const AuthProvider: FC<{ children: ReactNode }> = ({ children }) => {
       setLoading(false);
     });
 
+    // This handles the user coming back from a Google Sign-in redirect
     getRedirectResult(auth)
         .then((result) => {
             if (result) {
-                console.log('Redirect result successful');
-                setUser(result.user);
+                console.log('Redirect result successful, user:', result.user.uid);
+                // The onAuthStateChanged listener above will handle setting the user state
             }
         })
         .catch((error) => {
+            // This is where you would handle errors from the redirect.
+            // For example, if the user closes the popup.
             console.error("Error getting redirect result", error);
         })
-        .finally(() => setLoading(false))
+        // The loading state will be set to false by onAuthStateChanged
+        // so we don't need a .finally() here.
 
 
     return () => {
@@ -76,9 +80,12 @@ export const AuthProvider: FC<{ children: ReactNode }> = ({ children }) => {
   };
   
   const loginWithGoogle = async () => {
+    setLoading(true); // Set loading to true before redirect
     const provider = new GoogleAuthProvider();
     provider.addScope('https://www.googleapis.com/auth/calendar.events');
     await signInWithRedirect(auth, provider);
+    // Note: The code execution will stop here because of the redirect.
+    // The result is handled when the user is redirected back to the app.
   };
 
   const signup = (email: string, pass: string) => {
