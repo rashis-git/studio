@@ -18,17 +18,18 @@ import {
   sendPasswordResetEmail,
   UserCredential,
   GoogleAuthProvider,
-  signInWithPopup,
+  signInWithRedirect,
+  getRedirectResult,
 } from 'firebase/auth';
 import { auth } from '@/lib/firebase';
 
 interface AuthContextType {
   user: User | null;
   loading: boolean;
-  login: (email: string, pass:string) => Promise<UserCredential>;
-  loginWithGoogle: () => Promise<UserCredential>;
+  login: (email: string, pass:string) => Promise<UserCredential | null>;
+  loginWithGoogle: () => Promise<void>;
   logout: () => Promise<void>;
-  signup: (email: string, pass: string) => Promise<UserCredential>;
+  signup: (email: string, pass: string) => Promise<UserCredential | null>;
   sendPasswordReset: (email: string) => Promise<void>;
 }
 
@@ -51,6 +52,19 @@ export const AuthProvider: FC<{ children: ReactNode }> = ({ children }) => {
       setLoading(false);
     });
 
+    getRedirectResult(auth)
+        .then((result) => {
+            if (result) {
+                console.log('Redirect result successful');
+                setUser(result.user);
+            }
+        })
+        .catch((error) => {
+            console.error("Error getting redirect result", error);
+        })
+        .finally(() => setLoading(false))
+
+
     return () => {
       console.log('AuthProvider: Cleaning up onAuthStateChanged listener.');
       unsubscribe();
@@ -61,10 +75,10 @@ export const AuthProvider: FC<{ children: ReactNode }> = ({ children }) => {
     return signInWithEmailAndPassword(auth, email, pass);
   };
   
-  const loginWithGoogle = () => {
+  const loginWithGoogle = async () => {
     const provider = new GoogleAuthProvider();
     provider.addScope('https://www.googleapis.com/auth/calendar.events');
-    return signInWithPopup(auth, provider);
+    await signInWithRedirect(auth, provider);
   };
 
   const signup = (email: string, pass: string) => {
