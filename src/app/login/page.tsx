@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useAuth } from '@/hooks/use-auth';
@@ -25,18 +25,27 @@ const GoogleIcon = (props: React.SVGProps<SVGSVGElement>) => (
 export default function LoginPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [isLoading, setIsLoading] = useState(false);
+  const [isEmailLoading, setIsEmailLoading] = useState(false);
   const [isGoogleLoading, setIsGoogleLoading] = useState(false);
-  const { login, loginWithGoogle } = useAuth();
+  const { login, loginWithGoogle, user, loading } = useAuth();
   const router = useRouter();
   const { toast } = useToast();
 
+  useEffect(() => {
+    // If auth state is resolved and we have a user, redirect to main app
+    if (!loading && user) {
+        console.log('LoginPage: User detected, redirecting to /');
+        router.push('/');
+    }
+  }, [user, loading, router]);
+
+
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    setIsLoading(true);
+    setIsEmailLoading(true);
     try {
       await login(email, password);
-      router.push('/');
+      // The useEffect hook will handle the redirect
     } catch (error: any) {
       toast({
         title: "Login Failed",
@@ -44,7 +53,7 @@ export default function LoginPage() {
         variant: 'destructive'
       });
     } finally {
-        setIsLoading(false);
+        setIsEmailLoading(false);
     }
   };
 
@@ -52,18 +61,29 @@ export default function LoginPage() {
     setIsGoogleLoading(true);
     try {
         await loginWithGoogle();
-        router.push('/');
+        // The page will redirect to Google. The redirect result
+        // is handled by the useAuth hook when the user returns.
     } catch (error: any) {
         toast({
             title: "Google Login Failed",
             description: error.message,
             variant: 'destructive'
         });
-    } finally {
         setIsGoogleLoading(false);
     }
   }
 
+  // Show a full-page loader while Firebase is resolving the auth state,
+  // especially after a redirect.
+  if (loading) {
+    return (
+        <div className="flex items-center justify-center min-h-screen bg-muted/30">
+            <Loader2 className="w-12 h-12 animate-spin text-primary" />
+        </div>
+    )
+  }
+
+  // If we are done loading and there's no user, show the login form.
   return (
     <div className="flex items-center justify-center min-h-screen bg-muted/30">
       <Card className="w-full max-w-sm">
@@ -76,7 +96,7 @@ export default function LoginPage() {
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
-            <Button variant="outline" className="w-full" onClick={handleGoogleLogin} disabled={isGoogleLoading || isLoading}>
+            <Button variant="outline" className="w-full" onClick={handleGoogleLogin} disabled={isGoogleLoading || isEmailLoading}>
                 {isGoogleLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <GoogleIcon className="mr-2" />}
               Sign in with Google
             </Button>
@@ -101,7 +121,7 @@ export default function LoginPage() {
                 required
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                disabled={isLoading || isGoogleLoading}
+                disabled={isEmailLoading || isGoogleLoading}
               />
             </div>
             <div className="space-y-2">
@@ -120,11 +140,11 @@ export default function LoginPage() {
                 required 
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                disabled={isLoading || isGoogleLoading}
+                disabled={isEmailLoading || isGoogleLoading}
               />
             </div>
-            <Button type="submit" className="w-full" disabled={isLoading || isGoogleLoading}>
-              {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+            <Button type="submit" className="w-full" disabled={isEmailLoading || isGoogleLoading}>
+              {isEmailLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               Login
             </Button>
           </form>

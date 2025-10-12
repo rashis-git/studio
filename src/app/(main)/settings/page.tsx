@@ -30,7 +30,7 @@ export default function SettingsPage() {
   const [currentTheme, setCurrentTheme] = useState('theme-forest');
   const [notificationTimes, setNotificationTimes] = useState<string[]>([]);
   const [newTime, setNewTime] = useState('09:00');
-  const [isLoading, setIsLoading] = useTransition();
+  const [isSaving, startSaving] = useTransition();
   const [isNotificationsEnabled, setIsNotificationsEnabled] = useState(false);
   const { toast } = useToast();
 
@@ -81,23 +81,13 @@ export default function SettingsPage() {
         if (permission === 'granted') {
           toast({ title: "Notifications Enabled!", description: "You will receive reminders at your chosen times."});
         } else {
-          toast({ title: "Notifications Not Enabled", description: "You can enable notifications in your browser settings later.", variant: "destructive"});
-          setIsNotificationsEnabled(false);
-          localStorage.setItem('notifications-enabled', 'false');
+          toast({ title: "Notifications Not Granted", description: "You can enable notifications in your browser settings later."});
         }
       } catch (error) {
         toast({ title: "Error", description: "Failed to request notification permissions.", variant: "destructive"});
         setIsNotificationsEnabled(false);
         localStorage.setItem('notifications-enabled', 'false');
       }
-    } else if (enabled && typeof Notification !== 'undefined' && Notification.permission === 'granted') {
-      toast({ title: "Notifications Enabled!", description: "You will receive reminders at your chosen times."});
-    } else if (!enabled) {
-      toast({ title: "Notifications Disabled", description: "You will no longer receive reminders."});
-    } else if (enabled && Notification.permission === 'denied') {
-        toast({ title: "Permissions Blocked", description: "You need to allow notifications in your browser settings.", variant: "destructive"});
-        setIsNotificationsEnabled(false); // Force toggle off
-        localStorage.setItem('notifications-enabled', 'false');
     }
   };
 
@@ -123,13 +113,18 @@ export default function SettingsPage() {
         return;
     }
     
-    startTransition(async () => {
+    startSaving(async () => {
         try {
             const docRef = doc(db, 'notification-preferences', user.uid);
             await setDoc(docRef, { userId: user.uid, times: notificationTimes }, { merge: true });
             
             toast({ title: "Preferences Saved!", description: "Your notification settings have been updated."});
 
+            // The calendar event creation is disabled in the preview environment
+            // because Google Sign-In cannot complete in the iframe.
+            // In a production build, this code would be enabled.
+            console.log("Calendar event creation is currently disabled in this preview environment.");
+            
         } catch(e: any) {
             toast({ title: "Error", description: e.message || "Failed to save preferences.", variant: "destructive"});
         }
@@ -239,8 +234,8 @@ export default function SettingsPage() {
       </Card>
 
       <div className="pt-4 text-center space-y-4">
-        <Button size="lg" onClick={handleSaveNotificationPrefs} disabled={isLoading}>
-          {isLoading && <Loader2 className="animate-spin mr-2" />}
+        <Button size="lg" onClick={handleSaveNotificationPrefs} disabled={isSaving}>
+          {isSaving && <Loader2 className="animate-spin mr-2" />}
           Save Changes
         </Button>
         <Button size="lg" variant="destructive" onClick={handleLogout}>Sign Out</Button>

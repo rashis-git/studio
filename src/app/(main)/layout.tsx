@@ -25,10 +25,17 @@ export default function MainLayout({
   }, []);
 
   useEffect(() => {
-    if (!loading && !user && isClient) {
-      router.push('/login');
+    if (isClient) {
+        console.log(`MainLayout: Auth state check. Loading: ${loading}, User: ${!!user}`);
+        if (!loading && !user) {
+            console.log('MainLayout: Not loading and no user, redirecting to /login');
+            router.push('/login');
+        }
     }
+  }, [user, loading, router, isClient]);
 
+
+  useEffect(() => {
     if (user) {
       const checkAndCreateUser = async () => {
         console.log('MainLayout: Auth state confirmed for user:', user.uid);
@@ -39,6 +46,8 @@ export default function MainLayout({
             console.log('MainLayout: User document not found in Firestore. Creating on client...');
             await setDoc(userDocRef, {
               email: user.email,
+              displayName: user.displayName,
+              photoURL: user.photoURL,
               createdAt: serverTimestamp(),
             });
             console.log('MainLayout: Successfully created user document in Firestore.');
@@ -52,7 +61,7 @@ export default function MainLayout({
 
       checkAndCreateUser();
     }
-  }, [user, loading, router, isClient]);
+  }, [user]);
 
   if (!isClient || loading || !user) {
     return (
