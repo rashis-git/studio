@@ -9,6 +9,7 @@ import { Loader2 } from 'lucide-react';
 import { doc, getDoc, setDoc, serverTimestamp } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { useNotifications } from '@/hooks/use-notifications';
+import { useToast } from '@/hooks/use-toast';
 
 export default function MainLayout({
   children,
@@ -18,6 +19,7 @@ export default function MainLayout({
   const { user, loading } = useAuth();
   const router = useRouter();
   const [isClient, setIsClient] = useState(false);
+  const { toast } = useToast();
   useNotifications(); // Initialize notification listener
 
   useEffect(() => {
@@ -26,9 +28,7 @@ export default function MainLayout({
 
   useEffect(() => {
     if (isClient) {
-        console.log(`MainLayout: Auth state check. Loading: ${loading}, User: ${!!user}`);
         if (!loading && !user) {
-            console.log('MainLayout: Not loading and no user, redirecting to /login');
             router.push('/login');
         }
     }
@@ -51,17 +51,26 @@ export default function MainLayout({
               createdAt: serverTimestamp(),
             });
             console.log('MainLayout: Successfully created user document in Firestore.');
+            toast({
+              title: "Profile Created!",
+              description: "Your user profile has been saved in the database.",
+            });
           } else {
             console.log('MainLayout: User document already exists in Firestore.');
           }
-        } catch (error) {
+        } catch (error: any) {
           console.error('MainLayout: Error checking/creating user document:', error);
+          toast({
+            title: "Database Error",
+            description: `Could not create user profile: ${error.message}`,
+            variant: "destructive",
+          });
         }
       };
 
       checkAndCreateUser();
     }
-  }, [user]);
+  }, [user, toast]);
 
   if (!isClient || loading || !user) {
     return (
