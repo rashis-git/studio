@@ -66,7 +66,6 @@ export const AuthProvider: FC<{ children: ReactNode }> = ({ children }) => {
     // On initial load, try to get token from localStorage
     const savedToken = localStorage.getItem('google-access-token');
     if (savedToken) {
-        console.log('[DEBUG] Found saved access token in localStorage.');
         setAccessToken(savedToken);
     }
     setLoading(true);
@@ -109,12 +108,9 @@ export const AuthProvider: FC<{ children: ReactNode }> = ({ children }) => {
         const credential = GoogleAuthProvider.credentialFromResult(result);
         if (credential?.accessToken) {
           const token = credential.accessToken;
-          console.log('[DEBUG] Access Token captured on login:', token);
           setAccessToken(token);
           // Persist the token in localStorage
           localStorage.setItem('google-access-token', token);
-        } else {
-          console.log('[DEBUG] No access token found in credential after login.');
         }
     } catch (error) {
         console.error("AuthProvider: Error during signInWithPopup.", error);
@@ -127,9 +123,8 @@ export const AuthProvider: FC<{ children: ReactNode }> = ({ children }) => {
   };
 
   const getAccessToken = useCallback(async (): Promise<string | null> => {
-     console.log('[DEBUG] getAccessToken called. Returning stored token:', accessToken);
      if (!accessToken) {
-        console.error("[DEBUG] Access token is null.");
+        console.error("Access token is null.");
         return null;
      }
      return accessToken;
@@ -145,7 +140,6 @@ export const AuthProvider: FC<{ children: ReactNode }> = ({ children }) => {
     setUser(null);
     setAccessToken(null);
     localStorage.removeItem('google-access-token');
-    console.log('[DEBUG] User logged out, token cleared.');
   };
 
   const sendPasswordReset = (email: string) => {
