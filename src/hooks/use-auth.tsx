@@ -8,6 +8,7 @@ import {
   useEffect,
   ReactNode,
   FC,
+  useCallback,
 } from 'react';
 import {
   onAuthStateChanged,
@@ -19,21 +20,11 @@ import {
   UserCredential,
   GoogleAuthProvider,
   signInWithPopup,
+  getAdditionalUserInfo,
+  OAuthProvider,
 } from 'firebase/auth';
 import { auth, db } from '@/lib/firebase';
 import { doc, getDoc, setDoc, serverTimestamp } from 'firebase/firestore';
-
-interface AuthContextType {
-  user: User | null;
-  loading: boolean;
-  login: (email: string, pass:string) => Promise<UserCredential | null>;
-  loginWithGoogle: () => Promise<void>;
-  logout: () => Promise<void>;
-  signup: (email: string, pass: string) => Promise<UserCredential | null>;
-  sendPasswordReset: (email: string) => Promise<void>;
-}
-
-const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 // Helper function to create user profile in Firestore
 const getOrCreateUserProfile = async (user: User) => {
@@ -57,6 +48,19 @@ const getOrCreateUserProfile = async (user: User) => {
   }
 };
 
+
+interface AuthContextType {
+  user: User | null;
+  loading: boolean;
+  login: (email: string, pass:string) => Promise<UserCredential | null>;
+  loginWithGoogle: () => Promise<void>;
+  logout: () => Promise<void>;
+  signup: (email: string, pass: string) => Promise<UserCredential | null>;
+  sendPasswordReset: (email: string) => Promise<void>;
+  getAccessToken: () => Promise<string | null>;
+}
+
+const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider: FC<{ children: ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
@@ -97,13 +101,49 @@ export const AuthProvider: FC<{ children: ReactNode }> = ({ children }) => {
     const provider = new GoogleAuthProvider();
     provider.addScope('https://www.googleapis.com/auth/calendar.events');
     try {
-        await signInWithPopup(auth, provider);
-        // onAuthStateChanged will handle setting the user and loading state.
+        const result = await signInWithPopup(auth, provider);
+        const additionalInfo = getAdditionalUserInfo(result);
+        if (additionalInfo?.profile && 'id_token' in additionalInfo.profile) {
+            const id_token = (additionalInfo.profile as any).id_token;
+            // The access token is part of the credential, not the profile
+            const credential = GoogleAuthProvider.credentialFromResult(result);
+            if (credential?.accessToken) {
+              // Note: This is a short-lived access token.
+              // For long-term server-side access, you'd need a refresh token.
+              console.log("Access Token:", credential.accessToken);
+            }
+        }
     } catch (error) {
         console.error("AuthProvider: Error during signInWithPopup.", error);
+    } finally {
+        // onAuthStateChanged will handle setting the user and loading state
         setLoading(false);
     }
   };
+
+  const getAccessToken = useCallback(async (): Promise<string | null> => {
+    if (!auth.currentUser) return null;
+    try {
+      // This forces a refresh of the token if it's expired.
+      const idTokenResult = await auth.currentUser.getIdTokenResult(true);
+
+      // This is not the OAuth access token for Google APIs.
+      // We need to trigger the OAuth flow again to get a fresh one if needed,
+      // or ideally, handle this on the server with a refresh token.
+      // For a client-side only app, re-prompting is one way.
+      // A simpler way for this specific use case is to get it from the last login.
+      
+      const provider = new GoogleAuthProvider();
+      provider.addScope('https://www.googleapis.com/auth/calendar.events');
+      const result = await signInWithPopup(auth, provider);
+      const credential = GoogleAuthProvider.credentialFromResult(result);
+      return credential?.accessToken || null;
+      
+    } catch (error) {
+      console.error("Error getting access token:", error);
+      return null;
+    }
+  }, []);
 
   const signup = (email: string, pass: string) => {
     return createUserWithEmailAndPassword(auth, email, pass);
@@ -125,6 +165,7 @@ export const AuthProvider: FC<{ children: ReactNode }> = ({ children }) => {
     logout,
     signup,
     sendPasswordReset,
+    getAccessToken,
   };
 
   return (

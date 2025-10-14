@@ -18,6 +18,7 @@ const CreateCalendarEventInputSchema = z.object({
   startTime: z.string().describe('The start time of the event in ISO 8601 format.'),
   endTime: z.string().describe('The end time of the event in ISO 8601 format.'),
   appUrl: z.string().describe('The URL of the application to link in the event description.'),
+  timeZone: z.string().describe("The user's IANA timezone name (e.g., 'America/New_York')."),
 });
 
 export type CreateCalendarEventInput = z.infer<typeof CreateCalendarEventInputSchema>;
@@ -33,7 +34,7 @@ const createCalendarEventFlow = ai.defineFlow(
     outputSchema: z.any(),
   },
   async (input) => {
-    const { userAccessToken, userEmail, startTime, endTime, appUrl } = input;
+    const { userAccessToken, userEmail, startTime, endTime, appUrl, timeZone } = input;
 
     const oauth2Client = new google.auth.OAuth2();
     oauth2Client.setCredentials({ access_token: userAccessToken });
@@ -45,18 +46,17 @@ const createCalendarEventFlow = ai.defineFlow(
       description: `Time to log your activities! Click here to open the app: <a href="${appUrl}">${appUrl}</a>`,
       start: {
         dateTime: startTime,
-        timeZone: 'UTC', // Assuming UTC, user's calendar will adjust
+        timeZone: timeZone,
       },
       end: {
         dateTime: endTime,
-        timeZone: 'UTC',
+        timeZone: timeZone,
       },
       attendees: [{ email: userEmail }],
       reminders: {
         useDefault: false,
         overrides: [
-          { method: 'email', minutes: 10 },
-          { method: 'popup', minutes: 5 },
+          { method: 'popup', minutes: 0 }, // Remind at the start of the event
         ],
       },
     };
@@ -70,7 +70,7 @@ const createCalendarEventFlow = ai.defineFlow(
     } catch (error) {
       console.error('Error creating calendar event:', error);
       // We can throw or return an error object
-      throw new Error('Failed to create calendar event.');
+      throw new Error('Failed to create calendar event. Please ensure you have granted calendar permissions.');
     }
   }
 );
