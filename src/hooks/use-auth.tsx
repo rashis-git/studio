@@ -18,8 +18,7 @@ import {
   sendPasswordResetEmail,
   UserCredential,
   GoogleAuthProvider,
-  signInWithRedirect,
-  getRedirectResult,
+  signInWithPopup,
 } from 'firebase/auth';
 import { auth, db } from '@/lib/firebase';
 import { doc, getDoc, setDoc, serverTimestamp } from 'firebase/firestore';
@@ -81,11 +80,6 @@ export const AuthProvider: FC<{ children: ReactNode }> = ({ children }) => {
       console.log('AuthProvider: Auth state resolved, loading is now false.');
     });
 
-    // Also handle the redirect result on initial load
-    getRedirectResult(auth).catch((error) => {
-        console.error("AuthProvider: Error processing redirect result.", error);
-    });
-
     // Cleanup subscription on unmount
     return () => {
         console.log('AuthProvider: Cleaning up onAuthStateChanged listener.');
@@ -98,11 +92,17 @@ export const AuthProvider: FC<{ children: ReactNode }> = ({ children }) => {
   };
   
   const loginWithGoogle = async () => {
-    console.log('AuthProvider: loginWithGoogle called. Setting loading state and redirecting.');
+    console.log('AuthProvider: loginWithGoogle called. Using signInWithPopup.');
     setLoading(true);
     const provider = new GoogleAuthProvider();
     provider.addScope('https://www.googleapis.com/auth/calendar.events');
-    await signInWithRedirect(auth, provider);
+    try {
+        await signInWithPopup(auth, provider);
+        // onAuthStateChanged will handle setting the user and loading state.
+    } catch (error) {
+        console.error("AuthProvider: Error during signInWithPopup.", error);
+        setLoading(false);
+    }
   };
 
   const signup = (email: string, pass: string) => {
