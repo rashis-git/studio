@@ -32,7 +32,10 @@ export default function LoginPage() {
   const { toast } = useToast();
 
   useEffect(() => {
-    // If auth state is resolved and we have a user, redirect to main app
+    // If the main layout detects a user, it will keep them in the app.
+    // If we are on the login page and a user session is resolved,
+    // we should redirect to the main dashboard. The `loading` state
+    // from useAuth helps us wait until Firebase has confirmed the auth state.
     if (!loading && user) {
         console.log('LoginPage: User detected, redirecting to /');
         router.push('/');
@@ -45,15 +48,14 @@ export default function LoginPage() {
     setIsEmailLoading(true);
     try {
       await login(email, password);
-      // The useEffect hook will handle the redirect
+      // The useEffect hook will handle the redirect on successful login
     } catch (error: any) {
       toast({
         title: "Login Failed",
         description: error.message,
         variant: 'destructive'
       });
-    } finally {
-        setIsEmailLoading(false);
+      setIsEmailLoading(false); // Only set loading to false on error
     }
   };
 
@@ -74,7 +76,7 @@ export default function LoginPage() {
   }
 
   // Show a full-page loader while Firebase is resolving the auth state,
-  // especially after a redirect.
+  // especially after a redirect from Google. This prevents flicker.
   if (loading) {
     return (
         <div className="flex items-center justify-center min-h-screen bg-muted/30">
@@ -82,8 +84,14 @@ export default function LoginPage() {
         </div>
     )
   }
+  
+  // If we are done loading and there's a user, this component will redirect.
+  // If there's no user, show the login form. This prevents showing the form
+  // for a split second to an already logged-in user.
+  if (user) {
+    return null;
+  }
 
-  // If we are done loading and there's no user, show the login form.
   return (
     <div className="flex items-center justify-center min-h-screen bg-muted/30">
       <Card className="w-full max-w-sm">
