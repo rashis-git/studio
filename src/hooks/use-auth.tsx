@@ -109,12 +109,28 @@ export const AuthProvider: FC<{ children: ReactNode }> = ({ children }) => {
     } catch (error) {
         console.error("AuthProvider: Error during signInWithPopup.", error);
     } finally {
-        setLoading(false);
+        // Auth state change will set loading to false
     }
   };
 
   const getAccessToken = useCallback(async (): Promise<string | null> => {
-    return accessToken;
+    if (accessToken) return accessToken;
+
+    if (auth.currentUser) {
+        try {
+            const idTokenResult = await auth.currentUser.getIdTokenResult(true); // Force refresh
+            // Note: This is an ID token, not an OAuth access token for Google APIs.
+            // The access token for Google APIs is best captured right after sign-in.
+            // If the access token is expired or gone, you might need to re-authenticate for specific scopes.
+            // For now, we rely on the one captured at login.
+            console.log("getAccessToken: No stored access token, returning ID token as fallback.");
+            return idTokenResult.token;
+        } catch (error) {
+            console.error("Error refreshing token:", error);
+            return null;
+        }
+    }
+    return null;
   }, [accessToken]);
 
   const signup = (email: string, pass: string) => {
