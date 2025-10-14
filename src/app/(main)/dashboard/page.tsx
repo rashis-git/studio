@@ -181,7 +181,7 @@ export default function DashboardPage() {
                                 <div className="flex items-center gap-2 text-sm text-muted-foreground">
                                     <Clock className="w-4 h-4" />
                                     <span>{plan.time}</span>
-                                d</div>
+                                </div>
                             )}
                         </div>
                     ))}

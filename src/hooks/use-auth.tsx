@@ -21,7 +21,6 @@ import {
   GoogleAuthProvider,
   signInWithPopup,
   getAdditionalUserInfo,
-  OAuthProvider,
 } from 'firebase/auth';
 import { auth, db } from '@/lib/firebase';
 import { doc, getDoc, setDoc, serverTimestamp } from 'firebase/firestore';
@@ -65,6 +64,7 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 export const AuthProvider: FC<{ children: ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
+  const [accessToken, setAccessToken] = useState<string | null>(null);
 
   useEffect(() => {
     console.log('AuthProvider: Setting up auth state listener.');
@@ -73,18 +73,17 @@ export const AuthProvider: FC<{ children: ReactNode }> = ({ children }) => {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
       if (user) {
         console.log('AuthProvider: onAuthStateChanged - User FOUND. UID:', user.uid);
-        // User is signed in. Ensure their profile exists in Firestore.
         await getOrCreateUserProfile(user); 
         setUser(user);
       } else {
         console.log('AuthProvider: onAuthStateChanged - User is SIGNED OUT.');
         setUser(null);
+        setAccessToken(null);
       }
       setLoading(false);
       console.log('AuthProvider: Auth state resolved, loading is now false.');
     });
 
-    // Cleanup subscription on unmount
     return () => {
         console.log('AuthProvider: Cleaning up onAuthStateChanged listener.');
         unsubscribe();
@@ -102,48 +101,21 @@ export const AuthProvider: FC<{ children: ReactNode }> = ({ children }) => {
     provider.addScope('https://www.googleapis.com/auth/calendar.events');
     try {
         const result = await signInWithPopup(auth, provider);
-        const additionalInfo = getAdditionalUserInfo(result);
-        if (additionalInfo?.profile && 'id_token' in additionalInfo.profile) {
-            const id_token = (additionalInfo.profile as any).id_token;
-            // The access token is part of the credential, not the profile
-            const credential = GoogleAuthProvider.credentialFromResult(result);
-            if (credential?.accessToken) {
-              // Note: This is a short-lived access token.
-              // For long-term server-side access, you'd need a refresh token.
-              console.log("Access Token:", credential.accessToken);
-            }
+        const credential = GoogleAuthProvider.credentialFromResult(result);
+        if (credential?.accessToken) {
+          console.log("Access Token captured on login.");
+          setAccessToken(credential.accessToken);
         }
     } catch (error) {
         console.error("AuthProvider: Error during signInWithPopup.", error);
     } finally {
-        // onAuthStateChanged will handle setting the user and loading state
         setLoading(false);
     }
   };
 
   const getAccessToken = useCallback(async (): Promise<string | null> => {
-    if (!auth.currentUser) return null;
-    try {
-      // This forces a refresh of the token if it's expired.
-      const idTokenResult = await auth.currentUser.getIdTokenResult(true);
-
-      // This is not the OAuth access token for Google APIs.
-      // We need to trigger the OAuth flow again to get a fresh one if needed,
-      // or ideally, handle this on the server with a refresh token.
-      // For a client-side only app, re-prompting is one way.
-      // A simpler way for this specific use case is to get it from the last login.
-      
-      const provider = new GoogleAuthProvider();
-      provider.addScope('https://www.googleapis.com/auth/calendar.events');
-      const result = await signInWithPopup(auth, provider);
-      const credential = GoogleAuthProvider.credentialFromResult(result);
-      return credential?.accessToken || null;
-      
-    } catch (error) {
-      console.error("Error getting access token:", error);
-      return null;
-    }
-  }, []);
+    return accessToken;
+  }, [accessToken]);
 
   const signup = (email: string, pass: string) => {
     return createUserWithEmailAndPassword(auth, email, pass);
