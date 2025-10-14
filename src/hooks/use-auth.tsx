@@ -63,6 +63,12 @@ export const AuthProvider: FC<{ children: ReactNode }> = ({ children }) => {
   const [accessToken, setAccessToken] = useState<string | null>(null);
 
   useEffect(() => {
+    // On initial load, try to get token from localStorage
+    const savedToken = localStorage.getItem('google-access-token');
+    if (savedToken) {
+        console.log('[DEBUG] Found saved access token in localStorage.');
+        setAccessToken(savedToken);
+    }
     setLoading(true);
 
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
@@ -70,8 +76,10 @@ export const AuthProvider: FC<{ children: ReactNode }> = ({ children }) => {
         await getOrCreateUserProfile(user); 
         setUser(user);
       } else {
+        // If user logs out, clear everything
         setUser(null);
         setAccessToken(null);
+        localStorage.removeItem('google-access-token');
       }
       setLoading(false);
     });
@@ -100,45 +108,44 @@ export const AuthProvider: FC<{ children: ReactNode }> = ({ children }) => {
         const result = await signInWithPopup(auth, provider);
         const credential = GoogleAuthProvider.credentialFromResult(result);
         if (credential?.accessToken) {
-          console.log('[DEBUG] Access Token captured on login in useAuth:', credential.accessToken);
-          setAccessToken(credential.accessToken);
+          const token = credential.accessToken;
+          console.log('[DEBUG] Access Token captured on login:', token);
+          setAccessToken(token);
+          // Persist the token in localStorage
+          localStorage.setItem('google-access-token', token);
         } else {
           console.log('[DEBUG] No access token found in credential after login.');
         }
     } catch (error) {
         console.error("AuthProvider: Error during signInWithPopup.", error);
+        // Clear any lingering tokens if login fails
+        setAccessToken(null);
+        localStorage.removeItem('google-access-token');
     } finally {
         // Auth state change will set loading to false
     }
   };
 
   const getAccessToken = useCallback(async (): Promise<string | null> => {
-     if (auth.currentUser) {
-        try {
-            const idTokenResult = await auth.currentUser.getIdTokenResult(true);
-            // Firebase automatically refreshes the ID token. For OAuth access tokens,
-            // the original sign-in must have requested offline access. If it did,
-            // the new ID token can be used to get a new access token from your backend,
-            // but in a client-side app, re-upping the login is the simplest way if it expires.
-            // For now, we rely on the accessToken set at login.
-            console.log('[DEBUG] getAccessToken returning stored token:', accessToken);
-            return accessToken;
-        } catch (error) {
-            console.error("Error refreshing ID token:", error);
-            // If token refresh fails, the user might need to sign in again.
-            // Triggering a re-login here could be an option.
-            return null;
-        }
-    }
-    return null;
+     console.log('[DEBUG] getAccessToken called. Returning stored token:', accessToken);
+     if (!accessToken) {
+        console.error("[DEBUG] Access token is null.");
+        return null;
+     }
+     return accessToken;
   }, [accessToken]);
 
   const signup = (email: string, pass: string) => {
     return createUserWithEmailAndPassword(auth, email, pass);
   };
 
-  const logout = () => {
-    return signOut(auth);
+  const logout = async () => {
+    await signOut(auth);
+    // Explicitly clear state and storage on logout
+    setUser(null);
+    setAccessToken(null);
+    localStorage.removeItem('google-access-token');
+    console.log('[DEBUG] User logged out, token cleared.');
   };
 
   const sendPasswordReset = (email: string) => {
