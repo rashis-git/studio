@@ -16,6 +16,7 @@ import { db } from '@/lib/firebase';
 import { doc, getDoc, setDoc } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
 import { createCalendarEvent } from '@/ai/flows/create-calendar-event';
+import { deleteCalendarEvent } from '@/ai/flows/delete-calendar-event';
 import { addMinutes, format, parse } from 'date-fns';
 
 const themes = [
@@ -24,32 +25,37 @@ const themes = [
   { name: 'Azure', value: 'theme-azure', colors: ['#6e85b7', '#F2DDC1', '#9FE2BF'] },
 ];
 
+interface NotificationTime {
+    time: string;
+    eventId?: string | null;
+}
+
 export default function SettingsPage() {
   const { user, logout, getAccessToken } = useAuth();
   const router = useRouter();
   const [currentTheme, setCurrentTheme] = useState('theme-forest');
-  const [notificationTimes, setNotificationTimes] = useState<string[]>([]);
+  const [notificationTimes, setNotificationTimes] = useState<NotificationTime[]>([]);
   const [newTime, setNewTime] = useState('09:00');
   const [isSaving, startSaving] = useTransition();
   const [isNotificationsEnabled, setIsNotificationsEnabled] = useState(false);
   const [isCalendarSyncEnabled, setIsCalendarSyncEnabled] = useState(false);
   const { toast } = useToast();
 
+  // This ref will store the initial state from Firestore to compare against on save.
+  const [initialNotificationTimes, setInitialNotificationTimes] = useState<NotificationTime[]>([]);
+
+
   useEffect(() => {
-    // Theme
     const savedTheme = localStorage.getItem('dayflow-theme') || 'theme-forest';
     setCurrentTheme(savedTheme);
     document.documentElement.className = savedTheme;
 
-    // Notifications Enabled Toggle
     const notificationsEnabled = localStorage.getItem('notifications-enabled') === 'true';
     setIsNotificationsEnabled(notificationsEnabled);
 
-    // Calendar Sync Toggle
     const calendarSyncEnabled = localStorage.getItem('calendar-sync-enabled') === 'true';
     setIsCalendarSyncEnabled(calendarSyncEnabled);
 
-    // Fetch notification times from Firestore
     const fetchTimes = async () => {
       if (user) {
         const docRef = doc(db, 'notification-preferences', user.uid);
@@ -57,8 +63,10 @@ export default function SettingsPage() {
           const docSnap = await getDoc(docRef);
           if (docSnap.exists()) {
             const data = docSnap.data();
-            setNotificationTimes(data.times || []);
-            // Also update the local state for calendar sync from what's saved
+            const timesFromDb: NotificationTime[] = (data.times || []).map((t: any) => typeof t === 'string' ? { time: t, eventId: null } : t);
+            setNotificationTimes(timesFromDb);
+            setInitialNotificationTimes(timesFromDb);
+            
             const savedSyncPref = data.calendarSyncEnabled === true;
             setIsCalendarSyncEnabled(savedSyncPref);
             localStorage.setItem('calendar-sync-enabled', String(savedSyncPref));
@@ -115,14 +123,14 @@ export default function SettingsPage() {
   };
 
   const handleAddTime = () => {
-    if (newTime && !notificationTimes.includes(newTime)) {
-      const updatedTimes = [...notificationTimes, newTime].sort();
+    if (newTime && !notificationTimes.some(nt => nt.time === newTime)) {
+      const updatedTimes = [...notificationTimes, { time: newTime, eventId: null }].sort((a, b) => a.time.localeCompare(b.time));
       setNotificationTimes(updatedTimes);
     }
   };
 
   const handleRemoveTime = (timeToRemove: string) => {
-    setNotificationTimes(notificationTimes.filter(time => time !== timeToRemove));
+    setNotificationTimes(notificationTimes.filter(nt => nt.time !== timeToRemove));
   };
   
   const handleSaveNotificationPrefs = async () => {
@@ -132,50 +140,67 @@ export default function SettingsPage() {
     }
     
     startSaving(async () => {
-        try {
-            const docRef = doc(db, 'notification-preferences', user.uid);
-            await setDoc(docRef, { 
-              userId: user.uid, 
-              times: notificationTimes,
-              calendarSyncEnabled: isCalendarSyncEnabled,
-            }, { merge: true });
-            
-            toast({ title: "Preferences Saved!", description: "Your notification settings have been updated."});
-
-            if (isCalendarSyncEnabled) {
+      let finalTimes = [...notificationTimes];
+      try {
+          if (isCalendarSyncEnabled) {
               const accessToken = await getAccessToken();
-              console.log('[DEBUG] Access Token retrieved on settings page:', accessToken);
-
               if (!accessToken) {
-                throw new Error("Could not retrieve access token for Google Calendar. Please try signing out and in again.");
+                  throw new Error("Could not retrieve access token for Google Calendar. Please try signing out and in again.");
               }
 
+              const timesToAdd = notificationTimes.filter(nt => !initialNotificationTimes.some(it => it.time === nt.time));
+              const timesToRemove = initialNotificationTimes.filter(it => !notificationTimes.some(nt => nt.time === it.time));
+
+              // 1. Delete events for removed times
+              const deletionPromises = timesToRemove
+                  .filter(nt => nt.eventId)
+                  .map(nt => deleteCalendarEvent({ userAccessToken: accessToken, eventId: nt.eventId! }));
+              await Promise.all(deletionPromises);
+              toast({ title: "Processing...", description: `${deletionPromises.length} old reminder(s) removed from calendar.`});
+
+              // 2. Create events for new times
               const timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone;
-              const today = new Date();
-
-              const eventCreationPromises = notificationTimes.map(time => {
-                const startTime = parse(time, 'HH:mm', today);
-                const endTime = addMinutes(startTime, 15);
-
-                return createCalendarEvent({
-                  userAccessToken: accessToken,
-                  userEmail: user.email!,
-                  startTime: format(startTime, "yyyy-MM-dd'T'HH:mm:ss"),
-                  endTime: format(endTime, "yyyy-MM-dd'T'HH:mm:ss"),
-                  appUrl: window.location.origin,
-                  timeZone,
-                });
+              const creationPromises = timesToAdd.map(async (nt) => {
+                  const startTime = parse(nt.time, 'HH:mm', new Date());
+                  const endTime = addMinutes(startTime, 15);
+                  const result = await createCalendarEvent({
+                      userAccessToken: accessToken,
+                      userEmail: user.email!,
+                      startTime: format(startTime, "yyyy-MM-dd'T'HH:mm:ss"),
+                      endTime: format(endTime, "yyyy-MM-dd'T'HH:mm:ss"),
+                      appUrl: window.location.origin,
+                      timeZone,
+                  });
+                  return { time: nt.time, eventId: result.eventId };
               });
+              
+              const newEventTimes = await Promise.all(creationPromises);
+              toast({ title: "Processing...", description: `${newEventTimes.length} new reminder(s) added to calendar.`});
 
-              await Promise.all(eventCreationPromises);
+              // Reconstruct the final list of times
+              const existingTimes = notificationTimes.filter(nt => initialNotificationTimes.some(it => it.time === nt.time && it.eventId));
+              finalTimes = [...existingTimes, ...newEventTimes].sort((a,b) => a.time.localeCompare(b.time));
+          }
+          
+          // 3. Save the final state to Firestore
+          const docRef = doc(db, 'notification-preferences', user.uid);
+          await setDoc(docRef, { 
+            userId: user.uid, 
+            times: finalTimes,
+            calendarSyncEnabled: isCalendarSyncEnabled,
+          }, { merge: true });
 
-              toast({ title: "Calendar Sync Complete", description: "Your reminders have been added to Google Calendar." });
-            }
-            
-        } catch(e: any) {
-            console.error("Error during save/sync:", e);
-            toast({ title: "Error", description: e.message || "Failed to save preferences or sync calendar.", variant: "destructive"});
-        }
+          setNotificationTimes(finalTimes);
+          setInitialNotificationTimes(finalTimes);
+          
+          toast({ title: "Preferences Saved!", description: "Your notification settings have been updated."});
+          
+      } catch(e: any) {
+          console.error("Error during save/sync:", e);
+          toast({ title: "Error", description: e.message || "Failed to save preferences or sync calendar.", variant: "destructive"});
+          // Revert to initial state on failure
+          setNotificationTimes(initialNotificationTimes);
+      }
     });
   };
 
@@ -275,10 +300,10 @@ export default function SettingsPage() {
                 </div>
                 <div className="mt-4 space-y-2">
                     {notificationTimes.length > 0 ? (
-                        notificationTimes.map(time => (
-                            <div key={time} className="flex items-center justify-between p-2 rounded-md bg-muted/50">
-                                <span className="font-mono text-sm">{time}</span>
-                                <Button variant="ghost" size="icon" className="w-6 h-6 text-muted-foreground" onClick={() => handleRemoveTime(time)} aria-label={`Remove ${time}`}>
+                        notificationTimes.map(nt => (
+                            <div key={nt.time} className="flex items-center justify-between p-2 rounded-md bg-muted/50">
+                                <span className="font-mono text-sm">{nt.time}</span>
+                                <Button variant="ghost" size="icon" className="w-6 h-6 text-muted-foreground" onClick={() => handleRemoveTime(nt.time)} aria-label={`Remove ${nt.time}`}>
                                     <X className="w-4 h-4" />
                                 </Button>
                             </div>
@@ -302,5 +327,3 @@ export default function SettingsPage() {
     </div>
   );
 }
-
-    

@@ -31,7 +31,7 @@ const createCalendarEventFlow = ai.defineFlow(
   {
     name: 'createCalendarEventFlow',
     inputSchema: CreateCalendarEventInputSchema,
-    outputSchema: z.any(),
+    outputSchema: z.object({ eventId: z.string().optional() }),
   },
   async (input) => {
     const { userAccessToken, userEmail, startTime, endTime, appUrl, timeZone } = input;
@@ -67,10 +67,9 @@ const createCalendarEventFlow = ai.defineFlow(
         calendarId: 'primary',
         requestBody: event,
       });
-      return createdEvent.data;
+      return { eventId: createdEvent.data.id };
     } catch (error) {
       console.error('Error creating calendar event:', error);
-      // We can throw or return an error object
       throw new Error('Failed to create calendar event. Please ensure you have granted calendar permissions.');
     }
   }
