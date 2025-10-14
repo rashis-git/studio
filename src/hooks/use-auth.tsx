@@ -64,54 +64,33 @@ export const AuthProvider: FC<{ children: ReactNode }> = ({ children }) => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    console.log('AuthProvider: useEffect started.');
+    console.log('AuthProvider: Setting up auth state listener.');
+    setLoading(true);
 
-    const handleAuthChange = async () => {
-      console.log('AuthProvider: 1. Inside handleAuthChange async function.');
-      try {
-        console.log('AuthProvider: 2. Checking for redirect result...');
-        const result = await getRedirectResult(auth);
-        
-        if (result) {
-          console.log('AuthProvider: 3. SUCCESS: Google redirect result FOUND for user:', result.user.uid);
-          // Now that we have the user from redirect, create their profile immediately.
-          await getOrCreateUserProfile(result.user);
-        } else {
-          console.log('AuthProvider: 3. No redirect result found. This is normal on initial load.');
-        }
-      } catch (error) {
-        console.error("AuthProvider: 3. ERROR processing redirect result", error);
+    const unsubscribe = onAuthStateChanged(auth, async (user) => {
+      if (user) {
+        console.log('AuthProvider: onAuthStateChanged - User FOUND. UID:', user.uid);
+        // User is signed in. Ensure their profile exists in Firestore.
+        await getOrCreateUserProfile(user); 
+        setUser(user);
+      } else {
+        console.log('AuthProvider: onAuthStateChanged - User is SIGNED OUT.');
+        setUser(null);
       }
+      setLoading(false);
+      console.log('AuthProvider: Auth state resolved, loading is now false.');
+    });
 
-      console.log('AuthProvider: 4. Setting up onAuthStateChanged listener.');
-      const unsubscribe = onAuthStateChanged(auth, async (user) => {
-        if (user) {
-          console.log('AuthProvider: 5. onAuthStateChanged FIRED: User is SIGNED IN. UID:', user.uid);
-          // User is signed in. Ensure their profile exists.
-          // This handles both direct login and cases where redirect result might be missed.
-          await getOrCreateUserProfile(user); 
-          setUser(user);
-        } else {
-          console.log('AuthProvider: 5. onAuthStateChanged FIRED: User is SIGNED OUT.');
-          setUser(null);
-        }
-        console.log('AuthProvider: 6. Auth state resolved, setting loading to false.');
-        setLoading(false); 
-      });
+    // Also handle the redirect result on initial load
+    getRedirectResult(auth).catch((error) => {
+        console.error("AuthProvider: Error processing redirect result.", error);
+    });
 
-      return unsubscribe;
-    };
-    
-    const unsubscribePromise = handleAuthChange();
-
+    // Cleanup subscription on unmount
     return () => {
-      unsubscribePromise.then(unsub => {
-        if (unsub) {
-          console.log('AuthProvider: Cleaning up onAuthStateChanged listener.');
-          unsub();
-        }
-      });
-    };
+        console.log('AuthProvider: Cleaning up onAuthStateChanged listener.');
+        unsubscribe();
+    }
   }, []);
 
   const login = (email: string, pass: string) => {

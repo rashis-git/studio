@@ -1,8 +1,9 @@
 
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { useAuth } from '@/hooks/use-auth';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -28,13 +29,23 @@ export default function LoginPage() {
   const [isGoogleLoading, setIsGoogleLoading] = useState(false);
   const { login, loginWithGoogle, user, loading } = useAuth();
   const { toast } = useToast();
+  const router = useRouter();
+
+  useEffect(() => {
+    // If the auth state is resolved and there IS a user, redirect them away
+    // from the login page to the main dashboard.
+    if (!loading && user) {
+      router.push('/');
+    }
+  }, [user, loading, router]);
+
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsEmailLoading(true);
     try {
       await login(email, password);
-      // On success, the useAuth hook will set the user and the main layout will render.
+      // On success, the useAuth hook will redirect.
     } catch (error: any) {
       toast({
         title: "Login Failed",
@@ -61,8 +72,8 @@ export default function LoginPage() {
     }
   }
 
-  // Show a full-page loader while Firebase is resolving the auth state,
-  // especially after a redirect from Google. This prevents flicker.
+  // Show a full-page loader while Firebase is resolving the auth state.
+  // This is important for the initial load and after redirects.
   if (loading) {
     return (
         <div className="flex items-center justify-center min-h-screen bg-muted/30">
@@ -71,12 +82,12 @@ export default function LoginPage() {
     )
   }
   
-  // If we are done loading and there's a user, the main layout will handle
-  // rendering the app. This page should render nothing to avoid flicker.
+  // If there's a user, we've already initiated the redirect, so render nothing.
   if (user) {
     return null;
   }
 
+  // Only render the login form if loading is complete and there's no user.
   return (
     <div className="flex items-center justify-center min-h-screen bg-muted/30">
       <Card className="w-full max-w-sm">
