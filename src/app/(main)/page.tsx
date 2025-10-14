@@ -113,7 +113,7 @@ export default function OnboardingPage() {
       <header className="text-center">
         <h1 className="text-3xl font-bold font-headline">Welcome to DayFlow!</h1>
         <p className="text-muted-foreground">
-            Let's start by adding the daily activities you want to track.
+            Lets start by adding activities you want to track daily.
         </p>
       </header>
 
