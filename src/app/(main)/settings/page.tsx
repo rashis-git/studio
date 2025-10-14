@@ -145,17 +145,17 @@ export default function SettingsPage() {
             if (isCalendarSyncEnabled) {
               const accessToken = await getAccessToken();
               if (!accessToken) {
-                throw new Error("Could not retrieve access token for Google Calendar.");
+                throw new Error("Could not retrieve access token for Google Calendar. Please try signing out and in again.");
               }
 
               const timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone;
               const today = new Date();
 
-              for (const time of notificationTimes) {
+              const eventCreationPromises = notificationTimes.map(time => {
                 const startTime = parse(time, 'HH:mm', today);
                 const endTime = addMinutes(startTime, 15);
 
-                await createCalendarEvent({
+                return createCalendarEvent({
                   userAccessToken: accessToken,
                   userEmail: user.email!,
                   startTime: format(startTime, "yyyy-MM-dd'T'HH:mm:ss"),
@@ -163,12 +163,16 @@ export default function SettingsPage() {
                   appUrl: window.location.origin,
                   timeZone,
                 });
-              }
+              });
+
+              await Promise.all(eventCreationPromises);
+
               toast({ title: "Calendar Sync Complete", description: "Your reminders have been added to Google Calendar." });
             }
             
         } catch(e: any) {
-            toast({ title: "Error", description: e.message || "Failed to save preferences.", variant: "destructive"});
+            console.error("Error during save/sync:", e);
+            toast({ title: "Error", description: e.message || "Failed to save preferences or sync calendar.", variant: "destructive"});
         }
     });
   };
@@ -296,3 +300,5 @@ export default function SettingsPage() {
     </div>
   );
 }
+
+    
