@@ -144,6 +144,8 @@ export default function SettingsPage() {
 
             if (isCalendarSyncEnabled) {
               const accessToken = await getAccessToken();
+              console.log('[DEBUG] Access Token retrieved on settings page:', accessToken);
+
               if (!accessToken) {
                 throw new Error("Could not retrieve access token for Google Calendar. Please try signing out and in again.");
               }

@@ -31,16 +31,12 @@ const getOrCreateUserProfile = async (user: User) => {
   try {
     const userDocSnap = await getDoc(userDocRef);
     if (!userDocSnap.exists()) {
-      console.log('useAuth: User document not found. Creating now...');
       await setDoc(userDocRef, {
         email: user.email,
         displayName: user.displayName,
         photoURL: user.photoURL,
         createdAt: serverTimestamp(),
       });
-      console.log('useAuth: Successfully created user document in Firestore.');
-    } else {
-       console.log('useAuth: User document already exists. No action taken.');
     }
   } catch (error) {
      console.error('useAuth: Error getting or creating user document:', error);
@@ -67,25 +63,20 @@ export const AuthProvider: FC<{ children: ReactNode }> = ({ children }) => {
   const [accessToken, setAccessToken] = useState<string | null>(null);
 
   useEffect(() => {
-    console.log('AuthProvider: Setting up auth state listener.');
     setLoading(true);
 
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
       if (user) {
-        console.log('AuthProvider: onAuthStateChanged - User FOUND. UID:', user.uid);
         await getOrCreateUserProfile(user); 
         setUser(user);
       } else {
-        console.log('AuthProvider: onAuthStateChanged - User is SIGNED OUT.');
         setUser(null);
         setAccessToken(null);
       }
       setLoading(false);
-      console.log('AuthProvider: Auth state resolved, loading is now false.');
     });
 
     return () => {
-        console.log('AuthProvider: Cleaning up onAuthStateChanged listener.');
         unsubscribe();
     }
   }, []);
@@ -95,7 +86,6 @@ export const AuthProvider: FC<{ children: ReactNode }> = ({ children }) => {
   };
   
   const loginWithGoogle = async () => {
-    console.log('AuthProvider: loginWithGoogle called. Using signInWithPopup.');
     setLoading(true);
     const provider = new GoogleAuthProvider();
     provider.addScope('https://www.googleapis.com/auth/calendar.events');
@@ -103,8 +93,10 @@ export const AuthProvider: FC<{ children: ReactNode }> = ({ children }) => {
         const result = await signInWithPopup(auth, provider);
         const credential = GoogleAuthProvider.credentialFromResult(result);
         if (credential?.accessToken) {
-          console.log("Access Token captured on login.");
+          console.log('[DEBUG] Access Token captured on login in useAuth:', credential.accessToken);
           setAccessToken(credential.accessToken);
+        } else {
+          console.log('[DEBUG] No access token found in credential after login.');
         }
     } catch (error) {
         console.error("AuthProvider: Error during signInWithPopup.", error);
@@ -114,23 +106,7 @@ export const AuthProvider: FC<{ children: ReactNode }> = ({ children }) => {
   };
 
   const getAccessToken = useCallback(async (): Promise<string | null> => {
-    if (accessToken) return accessToken;
-
-    if (auth.currentUser) {
-        try {
-            const idTokenResult = await auth.currentUser.getIdTokenResult(true); // Force refresh
-            // Note: This is an ID token, not an OAuth access token for Google APIs.
-            // The access token for Google APIs is best captured right after sign-in.
-            // If the access token is expired or gone, you might need to re-authenticate for specific scopes.
-            // For now, we rely on the one captured at login.
-            console.log("getAccessToken: No stored access token, returning ID token as fallback.");
-            return idTokenResult.token;
-        } catch (error) {
-            console.error("Error refreshing token:", error);
-            return null;
-        }
-    }
-    return null;
+    return accessToken;
   }, [accessToken]);
 
   const signup = (email: string, pass: string) => {
