@@ -52,6 +52,7 @@ const createCalendarEventFlow = ai.defineFlow(
         dateTime: endTime,
         timeZone: timeZone,
       },
+      recurrence: ['RRULE:FREQ=DAILY'],
       attendees: [{ email: userEmail }],
       reminders: {
         useDefault: false,
