@@ -1,8 +1,7 @@
 
 'use client';
 
-import { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import { useState } from 'react';
 import Link from 'next/link';
 import { useAuth } from '@/hooks/use-auth';
 import { Button } from '@/components/ui/button';
@@ -28,34 +27,21 @@ export default function LoginPage() {
   const [isEmailLoading, setIsEmailLoading] = useState(false);
   const [isGoogleLoading, setIsGoogleLoading] = useState(false);
   const { login, loginWithGoogle, user, loading } = useAuth();
-  const router = useRouter();
   const { toast } = useToast();
-
-  useEffect(() => {
-    // If the main layout detects a user, it will keep them in the app.
-    // If we are on the login page and a user session is resolved,
-    // we should redirect to the main dashboard. The `loading` state
-    // from useAuth helps us wait until Firebase has confirmed the auth state.
-    if (!loading && user) {
-        console.log('LoginPage: User detected, redirecting to /');
-        router.push('/');
-    }
-  }, [user, loading, router]);
-
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsEmailLoading(true);
     try {
       await login(email, password);
-      // The useEffect hook will handle the redirect on successful login
+      // On success, the useAuth hook will set the user and the main layout will render.
     } catch (error: any) {
       toast({
         title: "Login Failed",
         description: error.message,
         variant: 'destructive'
       });
-      setIsEmailLoading(false); // Only set loading to false on error
+      setIsEmailLoading(false);
     }
   };
 
@@ -85,9 +71,8 @@ export default function LoginPage() {
     )
   }
   
-  // If we are done loading and there's a user, this component will redirect.
-  // If there's no user, show the login form. This prevents showing the form
-  // for a split second to an already logged-in user.
+  // If we are done loading and there's a user, the main layout will handle
+  // rendering the app. This page should render nothing to avoid flicker.
   if (user) {
     return null;
   }

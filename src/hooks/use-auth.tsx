@@ -21,7 +21,8 @@ import {
   signInWithRedirect,
   getRedirectResult,
 } from 'firebase/auth';
-import { auth } from '@/lib/firebase';
+import { auth, db } from '@/lib/firebase';
+import { doc, getDoc, setDoc, serverTimestamp } from 'firebase/firestore';
 
 interface AuthContextType {
   user: User | null;
@@ -34,6 +35,29 @@ interface AuthContextType {
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
+
+// Helper function to create user profile in Firestore
+const getOrCreateUserProfile = async (user: User) => {
+  const userDocRef = doc(db, 'users', user.uid);
+  try {
+    const userDocSnap = await getDoc(userDocRef);
+    if (!userDocSnap.exists()) {
+      console.log('useAuth: User document not found. Creating now...');
+      await setDoc(userDocRef, {
+        email: user.email,
+        displayName: user.displayName,
+        photoURL: user.photoURL,
+        createdAt: serverTimestamp(),
+      });
+      console.log('useAuth: Successfully created user document in Firestore.');
+    } else {
+       console.log('useAuth: User document already exists. No action taken.');
+    }
+  } catch (error) {
+     console.error('useAuth: Error getting or creating user document:', error);
+  }
+};
+
 
 export const AuthProvider: FC<{ children: ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
@@ -50,7 +74,8 @@ export const AuthProvider: FC<{ children: ReactNode }> = ({ children }) => {
         
         if (result) {
           console.log('AuthProvider: 3. SUCCESS: Google redirect result FOUND for user:', result.user.uid);
-          // The onAuthStateChanged listener below will handle setting the user.
+          // Now that we have the user from redirect, create their profile immediately.
+          await getOrCreateUserProfile(result.user);
         } else {
           console.log('AuthProvider: 3. No redirect result found. This is normal on initial load.');
         }
@@ -59,9 +84,12 @@ export const AuthProvider: FC<{ children: ReactNode }> = ({ children }) => {
       }
 
       console.log('AuthProvider: 4. Setting up onAuthStateChanged listener.');
-      const unsubscribe = onAuthStateChanged(auth, (user) => {
+      const unsubscribe = onAuthStateChanged(auth, async (user) => {
         if (user) {
           console.log('AuthProvider: 5. onAuthStateChanged FIRED: User is SIGNED IN. UID:', user.uid);
+          // User is signed in. Ensure their profile exists.
+          // This handles both direct login and cases where redirect result might be missed.
+          await getOrCreateUserProfile(user); 
           setUser(user);
         } else {
           console.log('AuthProvider: 5. onAuthStateChanged FIRED: User is SIGNED OUT.');
