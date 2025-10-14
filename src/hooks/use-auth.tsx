@@ -88,7 +88,14 @@ export const AuthProvider: FC<{ children: ReactNode }> = ({ children }) => {
   const loginWithGoogle = async () => {
     setLoading(true);
     const provider = new GoogleAuthProvider();
+    // This is the crucial part: request offline access to get a refresh token,
+    // and prompt for consent to ensure calendar scope is re-approved if needed.
     provider.addScope('https://www.googleapis.com/auth/calendar.events');
+    provider.setCustomParameters({
+      access_type: 'offline',
+      prompt: 'consent' 
+    });
+
     try {
         const result = await signInWithPopup(auth, provider);
         const credential = GoogleAuthProvider.credentialFromResult(result);
@@ -106,7 +113,24 @@ export const AuthProvider: FC<{ children: ReactNode }> = ({ children }) => {
   };
 
   const getAccessToken = useCallback(async (): Promise<string | null> => {
-    return accessToken;
+     if (auth.currentUser) {
+        try {
+            const idTokenResult = await auth.currentUser.getIdTokenResult(true);
+            // Firebase automatically refreshes the ID token. For OAuth access tokens,
+            // the original sign-in must have requested offline access. If it did,
+            // the new ID token can be used to get a new access token from your backend,
+            // but in a client-side app, re-upping the login is the simplest way if it expires.
+            // For now, we rely on the accessToken set at login.
+            console.log('[DEBUG] getAccessToken returning stored token:', accessToken);
+            return accessToken;
+        } catch (error) {
+            console.error("Error refreshing ID token:", error);
+            // If token refresh fails, the user might need to sign in again.
+            // Triggering a re-login here could be an option.
+            return null;
+        }
+    }
+    return null;
   }, [accessToken]);
 
   const signup = (email: string, pass: string) => {
