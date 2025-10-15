@@ -11,6 +11,7 @@ import { generateDailySummary, GenerateDailySummaryOutput } from '@/ai/flows/gen
 import { sendSummaryEmail } from '@/ai/flows/send-summary-email';
 import { format } from 'date-fns';
 import { useToast } from '@/hooks/use-toast';
+import { Skeleton } from '@/components/ui/skeleton';
 
 function SummarySkeleton() {
     return (
