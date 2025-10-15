@@ -8,66 +8,58 @@ service cloud.firestore {
     function isOwner(userId) {
       return request.auth != null && request.auth.uid == userId;
     }
-
-    // Server-side processes (like our AI summary) can read user data.
-    // We are assuming server-side calls are trusted and unauthenticated for this check.
+    
+    // Helper function to check if the request is from a trusted server process.
+    // For this app, we identify server processes as unauthenticated requests.
+    // In a production app, you would use service accounts or other auth mechanisms.
     function isServer() {
-        return request.auth == null;
+      return request.auth == null;
     }
 
     // Rules for the 'users' collection
     match /users/{userId} {
       allow create: if isOwner(userId);
-      // The owner can read their own profile, and the server can read any profile.
       allow read: if isOwner(userId) || isServer();
       allow update, delete: if isOwner(userId);
 
       // Rules for the 'savedActivities' sub-collection
       match /savedActivities/{activityId} {
-        // The owner of the user profile can manage their own saved activities.
         allow read, write, delete: if isOwner(userId);
       }
     }
 
     // Rules for the 'activity-logs' collection
     match /activity-logs/{logId} {
-      allow create: if request.resource.data.userId == request.auth.uid;
+      allow create: if isOwner(request.resource.data.userId);
       
-      // A specific user can read their own specific log document.
-      allow get: if isOwner(resource.data.userId);
+      // Allow reads for queries from the server if they specify a userId.
+      // Also allow users to read their own individual log documents.
+      allow read: if (isServer() && request.query.userId is string) || isOwner(resource.data.userId);
 
-      // A user can query for their own logs.
-      // The server can query logs for any user, as long as it specifies a userId.
-      allow list: if (isOwner(request.query.userId)) || (isServer() && request.query.keys.hasAny(['userId']));
-      
-      // Logs are immutable.
+      // Users cannot update or delete logs directly.
       allow update, delete: if false;
     }
 
     // Rules for the 'state-logs' (mood) collection
     match /state-logs/{logId} {
-      allow create: if request.resource.data.userId == request.auth.uid;
+      allow create: if isOwner(request.resource.data.userId);
+
+      // Allow reads for queries from the server if they specify a userId.
+      // Also allow users to read their own individual log documents.
+      allow read: if (isServer() && request.query.userId is string) || isOwner(resource.data.userId);
       
-      // A specific user can read their own specific mood log document.
-      allow get: if isOwner(resource.data.userId);
-      
-      // A user can query for their own logs.
-      // The server can query logs for any user, as long as it specifies a userId.
-      allow list: if (isOwner(request.query.userId)) || (isServer() && request.query.keys.hasAny(['userId']));
-      
-      // Logs are immutable.
+      // Users cannot update or delete logs directly.
       allow update, delete: if false;
     }
     
     // Rules for the 'planned-activities' collection
     match /planned-activities/{planId} {
-      // A user can only manage their own planned activities.
-      allow read, write, delete: if isOwner(request.resource.data.userId) || isOwner(resource.data.userId);
+      allow create: if isOwner(request.resource.data.userId);
+      allow read, update, delete: if isOwner(resource.data.userId);
     }
 
     // Rules for notification preferences
     match /notification-preferences/{userId} {
-      // A user can read and write their own notification preferences.
       allow read, write: if isOwner(userId);
     }
   }

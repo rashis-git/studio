@@ -61,10 +61,6 @@ export async function generateDailySummary(input: GenerateDailySummaryInput): Pr
 
 // Internal data-fetching function
 async function getDailyData(userId: string, dateStr: string) {
-    const targetDate = new Date(dateStr + 'T00:00:00');
-    const dayStart = startOfDay(targetDate);
-    const dayEnd = endOfDay(targetDate);
-
     let userGoals = 'Not specified';
     let activities: any[] = [];
     let moods: any[] = [];
@@ -112,8 +108,8 @@ async function getDailyData(userId: string, dateStr: string) {
         const moodQuery = query(
             collection(db, 'state-logs'),
             where('userId', '==', userId),
-            where('checkInTime', '>=', dayStart),
-            where('checkInTime', '<=', dayEnd)
+            where('checkInTime', '>=', startOfDay(new Date(dateStr))),
+            where('checkInTime', '<=', endOfDay(new Date(dateStr)))
         );
         const moodSnap = await getDocs(moodQuery);
         moods = moodSnap.docs.map(d => {
