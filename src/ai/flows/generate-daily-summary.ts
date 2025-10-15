@@ -65,56 +65,70 @@ async function getDailyData(userId: string, dateStr: string) {
     const dayStart = startOfDay(targetDate);
     const dayEnd = endOfDay(targetDate);
 
-    // Fetch user goals
-    const userDocRef = doc(db, 'users', userId);
-    const userDocSnap = await getDoc(userDocRef).catch(err => {
-        errorEmitter.emit('permission-error', new FirestorePermissionError({
-            path: userDocRef.path,
-            operation: 'get',
-        }));
-        throw err;
-    });
+    let userGoals = 'Not specified';
+    let activities: any[] = [];
+    let moods: any[] = [];
 
-    const userGoals = userDocSnap.exists() ? userDocSnap.data().goals || 'Not specified' : 'Not specified';
+    // Fetch user goals
+    try {
+        const userDocRef = doc(db, 'users', userId);
+        const userDocSnap = await getDoc(userDocRef);
+        if (userDocSnap.exists()) {
+            userGoals = userDocSnap.data().goals || 'Not specified';
+        }
+    } catch (err) {
+        const permissionError = new FirestorePermissionError({
+            path: `users/${userId}`,
+            operation: 'get',
+        });
+        errorEmitter.emit('permission-error', permissionError);
+        throw permissionError; // Re-throw to stop execution
+    }
 
     // Fetch activity logs
-    const activityQuery = query(
-        collection(db, 'activity-logs'),
-        where('userId', '==', userId),
-        where('date', '==', dateStr)
-    );
-    const activitySnap = await getDocs(activityQuery).catch(err => {
-        errorEmitter.emit('permission-error', new FirestorePermissionError({
+    try {
+        const activityQuery = query(
+            collection(db, 'activity-logs'),
+            where('userId', '==', userId),
+            where('date', '==', dateStr)
+        );
+        const activitySnap = await getDocs(activityQuery);
+        activities = activitySnap.docs.map(d => {
+            const data = d.data();
+            const ts = (data.timestamp as Timestamp)?.toDate() || new Date();
+            return { ...data, loggedAt: format(ts, 'p') };
+        });
+    } catch (err) {
+        const permissionError = new FirestorePermissionError({
             path: 'activity-logs',
             operation: 'list',
-        }));
-        throw err;
-    });
-    const activities = activitySnap.docs.map(d => {
-        const data = d.data();
-        const ts = (data.timestamp as Timestamp)?.toDate() || new Date();
-        return { ...data, loggedAt: format(ts, 'p') };
-    });
+        });
+        errorEmitter.emit('permission-error', permissionError);
+        throw permissionError;
+    }
 
     // Fetch mood logs
-    const moodQuery = query(
-        collection(db, 'state-logs'),
-        where('userId', '==', userId),
-        where('checkInTime', '>=', dayStart),
-        where('checkInTime', '<=', dayEnd)
-    );
-    const moodSnap = await getDocs(moodQuery).catch(err => {
-        errorEmitter.emit('permission-error', new FirestorePermissionError({
+    try {
+        const moodQuery = query(
+            collection(db, 'state-logs'),
+            where('userId', '==', userId),
+            where('checkInTime', '>=', dayStart),
+            where('checkInTime', '<=', dayEnd)
+        );
+        const moodSnap = await getDocs(moodQuery);
+        moods = moodSnap.docs.map(d => {
+            const data = d.data();
+            const ts = (data.checkInTime as Timestamp).toDate();
+            return { ...data, loggedAt: format(ts, 'p') };
+        });
+    } catch (err) {
+        const permissionError = new FirestorePermissionError({
             path: 'state-logs',
             operation: 'list',
-        }));
-        throw err;
-    });
-    const moods = moodSnap.docs.map(d => {
-        const data = d.data();
-        const ts = (data.checkInTime as Timestamp).toDate();
-        return { ...data, loggedAt: format(ts, 'p') };
-    });
+        });
+        errorEmitter.emit('permission-error', permissionError);
+        throw permissionError;
+    }
 
     return { activities, moods, userGoals };
 }
@@ -153,18 +167,18 @@ const prompt = ai.definePrompt({
 
     Analyze the provided data and generate a JSON response with the following structure. Be insightful and supportive in your tone.
 
-    1.  'overallSummary': Write a narrative summary (2-3 sentences) of the day. Mention key activities and the general mood.
-    2.  'moodAnalysis':
-        *   'trend': Describe the mood/energy trend. Did it improve, decline, or stay stable?
-        *   'highestEnergy': Note when energy was highest, linking it to an activity or time if possible.
-        *   'lowestEnergy': Note when energy was lowest.
+    1. 'overallSummary': Write a narrative summary (2-3 sentences) of the day. Mention key activities and the general mood.
+    2. 'moodAnalysis':
+        * 'trend': Describe the mood/energy trend. Did it improve, decline, or stay stable?
+        * 'highestEnergy': Note when energy was highest, linking it to an activity or time if possible.
+        * 'lowestEnergy': Note when energy was lowest.
     .
-    3.  'productivityAnalysis':
-        *   'mostProductiveActivity': Identify the activity that seems most productive (e.g., 'Deep Work', 'Office').
-        *   'totalProductiveHours': Calculate and sum the hours for productive activities.
-        *   'peakProductivityTime': Based on the logging times and activity types, infer a 'peak productivity' period. For example, if most work was logged in the morning, that's the peak.
-    4.  'keyInsights': Provide 3-4 bullet points of interesting connections or observations. For example, "Your energy was highest after you took a walk," or "You spent 4 hours in deep work, which aligns with your goal of improving focus."
-    5.  'suggestionsForTomorrow': Provide 2 actionable suggestions. Each suggestion should be directly linked to the user's data and their stated goals. Explain the 'why' behind each suggestion.
+    3. 'productivityAnalysis':
+        * 'mostProductiveActivity': Identify the activity that seems most productive (e.g., 'Deep Work', 'Office').
+        * 'totalProductiveHours': Calculate and sum the hours for productive activities.
+        * 'peakProductivityTime': Based on the logging times and activity types, infer a 'peak productivity' period. For example, if most work was logged in the morning, that's the peak.
+    4. 'keyInsights': Provide 3-4 bullet points of interesting connections or observations. For example, "Your energy was highest after you took a walk," or "You spent 4 hours in deep work, which aligns with your goal of improving focus."
+    5. 'suggestionsForTomorrow': Provide 2 actionable suggestions. Each suggestion should be directly linked to the user's data and their stated goals. Explain the 'why' behind each suggestion.
 
     **Crucial Instructions:**
     - If data is missing (e.g., no mood logs), state that clearly in the relevant analysis section (e.g., "No mood data was logged to analyze.") and do not fabricate insights.
