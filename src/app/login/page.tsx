@@ -74,17 +74,12 @@ export default function LoginPage() {
 
   // Show a full-page loader while Firebase is resolving the auth state.
   // This is important for the initial load and after redirects.
-  if (loading) {
+  if (loading || user) {
     return (
         <div className="flex items-center justify-center min-h-screen bg-muted/30">
             <Loader2 className="w-12 h-12 animate-spin text-primary" />
         </div>
     )
-  }
-  
-  // If there's a user, we've already initiated the redirect, so render nothing.
-  if (user) {
-    return null;
   }
 
   // Only render the login form if loading is complete and there's no user.

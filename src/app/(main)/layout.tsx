@@ -28,19 +28,25 @@ export default function MainLayout({
 
   // While loading, show a full-screen spinner. This covers the initial load
   // and the time after a redirect from Google sign-in.
-  if (loading || !user) {
+  if (loading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <Loader2 className="w-12 h-12 animate-spin text-primary" />
       </div>
     );
   }
-
+  
   // If loading is complete and we have a user, render the main app.
-  return (
-    <div className="flex flex-col min-h-dvh pb-16">
-      <main className="flex-1 w-full max-w-lg mx-auto">{children}</main>
-      <MainNav />
-    </div>
-  );
+  // If no user, the effect will have already triggered a redirect, so we can return null.
+  if (user) {
+    return (
+      <div className="flex flex-col min-h-dvh pb-16">
+        <main className="flex-1 w-full max-w-lg mx-auto">{children}</main>
+        <MainNav />
+      </div>
+    );
+  }
+  
+  // Return null while redirecting
+  return null;
 }

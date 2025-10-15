@@ -91,7 +91,6 @@ export const AuthProvider: FC<{ children: ReactNode }> = ({ children }) => {
   };
   
   const loginWithGoogle = async (): Promise<string | null> => {
-    setLoading(true);
     const provider = new GoogleAuthProvider();
     provider.addScope('https://www.googleapis.com/auth/calendar.events');
     provider.setCustomParameters({
@@ -114,15 +113,13 @@ export const AuthProvider: FC<{ children: ReactNode }> = ({ children }) => {
         setAccessToken(null);
         localStorage.removeItem('google-access-token');
         throw error;
-    } finally {
-        // Auth state change will set loading to false in the listener
     }
   };
 
   const getAccessToken = useCallback(async (): Promise<string | null> => {
      const tokenFromStorage = localStorage.getItem('google-access-token');
      if (!tokenFromStorage) {
-        console.error("Access token is not available in storage.");
+        // This is not an error, just means we need to re-auth.
         return null;
      }
      return tokenFromStorage;
