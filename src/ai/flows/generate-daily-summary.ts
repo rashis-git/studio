@@ -14,7 +14,7 @@ import { ai } from '@/ai/genkit';
 import { z } from 'genkit';
 import { db } from '@/lib/firebase';
 import { collection, query, where, getDocs, doc, getDoc, Timestamp } from 'firebase/firestore';
-import { format, startOfDay, endOfDay } from 'date-fns';
+import { format } from 'date-fns';
 import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError } from '@/firebase/errors';
 
@@ -108,8 +108,7 @@ async function getDailyData(userId: string, dateStr: string) {
         const moodQuery = query(
             collection(db, 'state-logs'),
             where('userId', '==', userId),
-            where('checkInTime', '>=', startOfDay(new Date(dateStr))),
-            where('checkInTime', '<=', endOfDay(new Date(dateStr)))
+            where('date', '==', dateStr)
         );
         const moodSnap = await getDocs(moodQuery);
         moods = moodSnap.docs.map(d => {

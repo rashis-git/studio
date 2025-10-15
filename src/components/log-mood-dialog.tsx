@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState } from 'react';
@@ -7,11 +8,12 @@ import { Slider } from '@/components/ui/slider';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Loader2 } from 'lucide-react';
+import { format } from 'date-fns';
 
 interface LogMoodDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onSave: (mood: { energy: number, productivity: number, happinessIndex: number, context: string }) => void;
+  onSave: (mood: { energy: number, productivity: number, happinessIndex: number, context: string, date: string }) => void;
   isPending: boolean;
 }
 
@@ -27,7 +29,8 @@ export function LogMoodDialog({
   const [context, setContext] = useState('');
 
   const handleSave = () => {
-    onSave({ energy, productivity, happinessIndex, context });
+    const todayStr = format(new Date(), 'yyyy-MM-dd');
+    onSave({ energy, productivity, happinessIndex, context, date: todayStr });
     onOpenChange(false);
     // Reset fields
     setEnergy(5);

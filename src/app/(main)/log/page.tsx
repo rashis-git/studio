@@ -190,7 +190,7 @@ export default function LogTimePage() {
     });
   };
 
-  const handleSaveMood = (mood: { energy: number, productivity: number, happinessIndex: number, context: string }) => {
+  const handleSaveMood = (mood: { energy: number, productivity: number, happinessIndex: number, context: string, date: string }) => {
     if (!user) {
       toast({ title: "Not authenticated", description: "You must be logged in to save.", variant: "destructive" });
       return;
