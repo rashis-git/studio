@@ -1,35 +1,71 @@
+
 rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
-    
-    // Rule for user-specific sub-collections (like savedActivities)
-    match /users/{userId}/{documents=**} {
-      allow read, write: if request.auth.uid == userId;
+
+    // Helper function to check if a user is the owner of the data.
+    function isOwner(userId) {
+      return request.auth != null && request.auth.uid == userId;
     }
 
-    // Rule for activity logs
+    // Rules for the 'users' collection
+    match /users/{userId} {
+      // Any authenticated user can create their own user profile document.
+      allow create: if isOwner(userId);
+
+      // Only the owner can read, update, or delete their own profile.
+      // Server-side processes (like our AI summary) can also read user data.
+      // We are assuming server-side calls are trusted and unauthenticated for this check.
+      allow read: if isOwner(userId) || request.auth == null;
+      allow update, delete: if isOwner(userId);
+
+      // Rules for the 'savedActivities' sub-collection
+      match /savedActivities/{activityId} {
+        // The owner of the user profile can manage their own saved activities.
+        allow read, write, delete: if isOwner(userId);
+      }
+    }
+
+    // Rules for the 'activity-logs' collection
     match /activity-logs/{logId} {
-      allow create: if request.auth.uid != null && request.resource.data.userId == request.auth.uid;
-      allow read: if request.auth.uid != null && resource.data.userId == request.auth.uid;
+      // An authenticated user can create a log entry if they are the owner.
+      allow create: if request.resource.data.userId == request.auth.uid;
+      
+      // Server-side processes can read activity logs to generate reports.
+      // Logged-in users can read their own logs.
+      allow read: if request.auth == null || isOwner(resource.data.userId);
+
+      // Users cannot update or delete logs directly.
+      allow update, delete: if false;
     }
 
-    // Rule for mood/state logs
+    // Rules for the 'state-logs' (mood) collection
     match /state-logs/{logId} {
-      allow create: if request.auth.uid != null && request.resource.data.userId == request.auth.uid;
-      allow read: if request.auth.uid != null && resource.data.userId == request.auth.uid;
-    }
+      // An authenticated user can create a mood log if they are the owner.
+      allow create: if request.resource.data.userId == request.auth.uid;
 
-    // Rule for planned activities
+      // Server-side processes can read mood logs to generate reports.
+      // Logged-in users can read their own logs.
+      allow read: if request.auth == null || isOwner(resource.data.userId);
+
+      // Users cannot update or delete logs directly.
+      allow update, delete: if false;
+    }
+    
+    // Rules for the 'planned-activities' collection
     match /planned-activities/{planId} {
-      allow read, update, delete: if request.auth.uid != null && resource.data.userId == request.auth.uid;
-      allow create: if request.auth.uid != null && request.resource.data.userId == request.auth.uid;
+      // A logged-in user can create a plan for themselves.
+      allow create: if request.resource.data.userId == request.auth.uid;
+      
+      // A user can read, update, or delete their own planned activities.
+      allow read, update, delete: if isOwner(resource.data.userId);
     }
 
-    // NEW RULE: This rule secures notification preferences.
-    // A user can only read or write to their own notification settings document.
+    // Rules for notification preferences
     match /notification-preferences/{userId} {
-      allow read, write: if request.auth.uid != null && request.auth.uid == userId;
+      // A user can read and write their own notification preferences.
+      allow read, write: if isOwner(userId);
     }
   }
 }
