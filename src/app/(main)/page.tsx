@@ -5,7 +5,7 @@ import { useState, useEffect, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/hooks/use-auth';
 import { db } from '@/lib/firebase';
-import { collection, query, getDocs, doc, writeBatch, where, addDoc, serverTimestamp, deleteDoc, setDoc } from 'firebase/firestore';
+import { collection, query, getDocs, doc, writeBatch, where, addDoc, serverTimestamp, deleteDoc, setDoc, getDoc } from 'firebase/firestore';
 import type { Activity } from '@/lib/types';
 import { Button } from '@/components/ui/button';
 import { Loader2, PlusCircle, ArrowRight, CheckCircle, Trash2 } from 'lucide-react';
