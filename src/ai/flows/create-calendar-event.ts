@@ -68,8 +68,11 @@ const createCalendarEventFlow = ai.defineFlow(
         requestBody: event,
       });
       return { eventId: createdEvent.data.id };
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error creating calendar event:', error);
+      if (error.code === 401) {
+        throw new Error('Google Calendar authorization failed. Please go to Settings and re-enable calendar sync.');
+      }
       throw new Error('Failed to create calendar event. Please ensure you have granted calendar permissions.');
     }
   }

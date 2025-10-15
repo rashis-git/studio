@@ -48,7 +48,7 @@ interface AuthContextType {
   user: User | null;
   loading: boolean;
   login: (email: string, pass:string) => Promise<UserCredential | null>;
-  loginWithGoogle: () => Promise<void>;
+  loginWithGoogle: () => Promise<string | null>;
   logout: () => Promise<void>;
   signup: (email: string, pass: string) => Promise<UserCredential | null>;
   sendPasswordReset: (email: string) => Promise<void>;
@@ -63,7 +63,6 @@ export const AuthProvider: FC<{ children: ReactNode }> = ({ children }) => {
   const [accessToken, setAccessToken] = useState<string | null>(null);
 
   useEffect(() => {
-    // On initial load, try to get token from localStorage
     const savedToken = localStorage.getItem('google-access-token');
     if (savedToken) {
         setAccessToken(savedToken);
@@ -75,7 +74,6 @@ export const AuthProvider: FC<{ children: ReactNode }> = ({ children }) => {
         await getOrCreateUserProfile(user); 
         setUser(user);
       } else {
-        // If user logs out, clear everything
         setUser(null);
         setAccessToken(null);
         localStorage.removeItem('google-access-token');
@@ -92,11 +90,9 @@ export const AuthProvider: FC<{ children: ReactNode }> = ({ children }) => {
     return signInWithEmailAndPassword(auth, email, pass);
   };
   
-  const loginWithGoogle = async () => {
+  const loginWithGoogle = async (): Promise<string | null> => {
     setLoading(true);
     const provider = new GoogleAuthProvider();
-    // This is the crucial part: request offline access to get a refresh token,
-    // and prompt for consent to ensure calendar scope is re-approved if needed.
     provider.addScope('https://www.googleapis.com/auth/calendar.events');
     provider.setCustomParameters({
       access_type: 'offline',
@@ -109,26 +105,28 @@ export const AuthProvider: FC<{ children: ReactNode }> = ({ children }) => {
         if (credential?.accessToken) {
           const token = credential.accessToken;
           setAccessToken(token);
-          // Persist the token in localStorage
           localStorage.setItem('google-access-token', token);
+          return token;
         }
+        return null;
     } catch (error) {
         console.error("AuthProvider: Error during signInWithPopup.", error);
-        // Clear any lingering tokens if login fails
         setAccessToken(null);
         localStorage.removeItem('google-access-token');
+        throw error;
     } finally {
-        // Auth state change will set loading to false
+        // Auth state change will set loading to false in the listener
     }
   };
 
   const getAccessToken = useCallback(async (): Promise<string | null> => {
-     if (!accessToken) {
-        console.error("Access token is null.");
+     const tokenFromStorage = localStorage.getItem('google-access-token');
+     if (!tokenFromStorage) {
+        console.error("Access token is not available in storage.");
         return null;
      }
-     return accessToken;
-  }, [accessToken]);
+     return tokenFromStorage;
+  }, []);
 
   const signup = (email: string, pass: string) => {
     return createUserWithEmailAndPassword(auth, email, pass);
@@ -136,10 +134,10 @@ export const AuthProvider: FC<{ children: ReactNode }> = ({ children }) => {
 
   const logout = async () => {
     await signOut(auth);
-    // Explicitly clear state and storage on logout
     setUser(null);
     setAccessToken(null);
     localStorage.removeItem('google-access-token');
+    localStorage.removeItem('calendar-sync-enabled');
   };
 
   const sendPasswordReset = (email: string) => {

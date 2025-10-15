@@ -31,7 +31,7 @@ interface NotificationTime {
 }
 
 export default function SettingsPage() {
-  const { user, logout, getAccessToken } = useAuth();
+  const { user, logout, getAccessToken, loginWithGoogle } = useAuth();
   const router = useRouter();
   const [currentTheme, setCurrentTheme] = useState('theme-forest');
   const [notificationTimes, setNotificationTimes] = useState<NotificationTime[]>([]);
@@ -41,7 +41,6 @@ export default function SettingsPage() {
   const [isCalendarSyncEnabled, setIsCalendarSyncEnabled] = useState(false);
   const { toast } = useToast();
 
-  // This ref will store the initial state from Firestore to compare against on save.
   const [initialNotificationTimes, setInitialNotificationTimes] = useState<NotificationTime[]>([]);
 
 
@@ -52,9 +51,6 @@ export default function SettingsPage() {
 
     const notificationsEnabled = localStorage.getItem('notifications-enabled') === 'true';
     setIsNotificationsEnabled(notificationsEnabled);
-
-    const calendarSyncEnabled = localStorage.getItem('calendar-sync-enabled') === 'true';
-    setIsCalendarSyncEnabled(calendarSyncEnabled);
 
     const fetchTimes = async () => {
       if (user) {
@@ -108,11 +104,28 @@ export default function SettingsPage() {
     }
   };
 
-  const handleCalendarSyncToggle = (enabled: boolean) => {
-    setIsCalendarSyncEnabled(enabled);
-    localStorage.setItem('calendar-sync-enabled', String(enabled));
+  const handleCalendarSyncToggle = async (enabled: boolean) => {
     if (enabled) {
-      toast({ title: "Calendar Sync Enabled", description: "Reminders will be added to your Google Calendar on save."});
+        try {
+            // This will trigger the Google sign-in and consent prompt.
+            const token = await loginWithGoogle();
+            if (token) {
+                setIsCalendarSyncEnabled(true);
+                localStorage.setItem('calendar-sync-enabled', 'true');
+                toast({ title: "Calendar Sync Enabled", description: "Reminders will be synced on save."});
+            } else {
+                throw new Error("Failed to get authorization from Google.");
+            }
+        } catch (error) {
+            console.error("Error during Google auth for calendar sync:", error);
+            toast({ title: "Authorization Failed", description: "Could not get permission for Google Calendar.", variant: "destructive"});
+            setIsCalendarSyncEnabled(false); // Keep it disabled if auth fails
+            localStorage.setItem('calendar-sync-enabled', 'false');
+        }
+    } else {
+        // Just disable it if the user is turning it off.
+        setIsCalendarSyncEnabled(false);
+        localStorage.setItem('calendar-sync-enabled', 'false');
     }
   };
 
@@ -145,20 +158,20 @@ export default function SettingsPage() {
           if (isCalendarSyncEnabled) {
               const accessToken = await getAccessToken();
               if (!accessToken) {
-                  throw new Error("Could not retrieve access token for Google Calendar. Please try signing out and in again.");
+                  throw new Error("Could not retrieve access token. Please re-enable Calendar Sync to authorize.");
               }
 
               const timesToAdd = notificationTimes.filter(nt => !initialNotificationTimes.some(it => it.time === nt.time));
               const timesToRemove = initialNotificationTimes.filter(it => !notificationTimes.some(nt => nt.time === it.time));
 
-              // 1. Delete events for removed times
               const deletionPromises = timesToRemove
                   .filter(nt => nt.eventId)
                   .map(nt => deleteCalendarEvent({ userAccessToken: accessToken, eventId: nt.eventId! }));
-              await Promise.all(deletionPromises);
-              toast({ title: "Processing...", description: `${deletionPromises.length} old reminder(s) removed from calendar.`});
+              if(deletionPromises.length > 0) {
+                await Promise.all(deletionPromises);
+                toast({ title: "Processing...", description: `${deletionPromises.length} old reminder(s) removed from calendar.`});
+              }
 
-              // 2. Create events for new times
               const timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone;
               const creationPromises = timesToAdd.map(async (nt) => {
                   const startTime = parse(nt.time, 'HH:mm', new Date());
@@ -174,15 +187,15 @@ export default function SettingsPage() {
                   return { time: nt.time, eventId: result.eventId };
               });
               
-              const newEventTimes = await Promise.all(creationPromises);
-              toast({ title: "Processing...", description: `${newEventTimes.length} new reminder(s) added to calendar.`});
-
-              // Reconstruct the final list of times
-              const existingTimes = notificationTimes.filter(nt => initialNotificationTimes.some(it => it.time === nt.time && it.eventId));
-              finalTimes = [...existingTimes, ...newEventTimes].sort((a,b) => a.time.localeCompare(b.time));
+              if(creationPromises.length > 0) {
+                const newEventTimes = await Promise.all(creationPromises);
+                toast({ title: "Processing...", description: `${newEventTimes.length} new reminder(s) added to calendar.`});
+                
+                const existingTimes = notificationTimes.filter(nt => !timesToAdd.some(tat => tat.time === nt.time));
+                finalTimes = [...existingTimes, ...newEventTimes].sort((a,b) => a.time.localeCompare(b.time));
+              }
           }
           
-          // 3. Save the final state to Firestore
           const docRef = doc(db, 'notification-preferences', user.uid);
           await setDoc(docRef, { 
             userId: user.uid, 
@@ -198,7 +211,6 @@ export default function SettingsPage() {
       } catch(e: any) {
           console.error("Error during save/sync:", e);
           toast({ title: "Error", description: e.message || "Failed to save preferences or sync calendar.", variant: "destructive"});
-          // Revert to initial state on failure
           setNotificationTimes(initialNotificationTimes);
       }
     });

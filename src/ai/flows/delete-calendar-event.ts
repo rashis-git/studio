@@ -44,10 +44,12 @@ const deleteCalendarEventFlow = ai.defineFlow(
       });
       return { success: true };
     } catch (error: any) {
-        // If the event is already deleted (410 Gone), we can consider it a success for our purposes.
         if (error.code === 410) {
             console.log(`Event ${eventId} was already deleted.`);
             return { success: true };
+        }
+        if (error.code === 401) {
+            throw new Error('Google Calendar authorization failed. Please go to Settings and re-enable calendar sync.');
         }
       console.error('Error deleting calendar event:', error);
       throw new Error('Failed to delete calendar event.');
