@@ -16,8 +16,6 @@ import { z } from 'genkit';
 import { Resend } from 'resend';
 import { GenerateDailySummaryOutput } from './generate-daily-summary'; // Reuse the type
 
-const resend = new Resend(process.env.RESEND_API_KEY);
-
 const SendSummaryEmailInputSchema = z.object({
   userEmail: z.string().email().describe("The recipient's email address."),
   userName: z.string().describe("The recipient's name."),
@@ -69,9 +67,10 @@ const sendSummaryEmailFlow = ai.defineFlow(
   async ({ userEmail, userName, summaryData }) => {
     if (!process.env.RESEND_API_KEY) {
       console.error("Resend API key is not configured.");
-      return { success: false, message: "Email server is not configured." };
+      return { success: false, message: "Email server is not configured. RESEND_API_KEY is missing." };
     }
     
+    const resend = new Resend(process.env.RESEND_API_KEY);
     const htmlBody = formatSummaryToHtml(summaryData, userName);
 
     try {
