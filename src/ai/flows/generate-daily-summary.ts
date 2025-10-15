@@ -15,6 +15,9 @@ import { z } from 'genkit';
 import { db } from '@/lib/firebase';
 import { collection, query, where, getDocs, doc, getDoc, Timestamp } from 'firebase/firestore';
 import { format, startOfDay, endOfDay } from 'date-fns';
+import { errorEmitter } from '@/firebase/error-emitter';
+import { FirestorePermissionError } from '@/firebase/errors';
+
 
 // Define schemas for sub-objects in the output
 const MoodAnalysisSchema = z.object({
@@ -58,13 +61,20 @@ export async function generateDailySummary(input: GenerateDailySummaryInput): Pr
 
 // Internal data-fetching function
 async function getDailyData(userId: string, dateStr: string) {
-    const targetDate = new Date(dateStr + 'T00:00:00'); // Ensure we are parsing the date correctly
+    const targetDate = new Date(dateStr + 'T00:00:00');
     const dayStart = startOfDay(targetDate);
     const dayEnd = endOfDay(targetDate);
 
     // Fetch user goals
     const userDocRef = doc(db, 'users', userId);
-    const userDocSnap = await getDoc(userDocRef);
+    const userDocSnap = await getDoc(userDocRef).catch(err => {
+        errorEmitter.emit('permission-error', new FirestorePermissionError({
+            path: userDocRef.path,
+            operation: 'get',
+        }));
+        throw err;
+    });
+
     const userGoals = userDocSnap.exists() ? userDocSnap.data().goals || 'Not specified' : 'Not specified';
 
     // Fetch activity logs
@@ -73,15 +83,17 @@ async function getDailyData(userId: string, dateStr: string) {
         where('userId', '==', userId),
         where('date', '==', dateStr)
     );
-    const activitySnap = await getDocs(activityQuery);
+    const activitySnap = await getDocs(activityQuery).catch(err => {
+        errorEmitter.emit('permission-error', new FirestorePermissionError({
+            path: 'activity-logs',
+            operation: 'list',
+        }));
+        throw err;
+    });
     const activities = activitySnap.docs.map(d => {
         const data = d.data();
-        const ts = (data.timestamp as Timestamp)?.toDate() || new Date(); // Fallback to now if timestamp is missing
-        return {
-            ...data,
-            // Format timestamp for the prompt
-            loggedAt: format(ts, 'p') 
-        };
+        const ts = (data.timestamp as Timestamp)?.toDate() || new Date();
+        return { ...data, loggedAt: format(ts, 'p') };
     });
 
     // Fetch mood logs
@@ -91,14 +103,17 @@ async function getDailyData(userId: string, dateStr: string) {
         where('checkInTime', '>=', dayStart),
         where('checkInTime', '<=', dayEnd)
     );
-    const moodSnap = await getDocs(moodQuery);
+    const moodSnap = await getDocs(moodQuery).catch(err => {
+        errorEmitter.emit('permission-error', new FirestorePermissionError({
+            path: 'state-logs',
+            operation: 'list',
+        }));
+        throw err;
+    });
     const moods = moodSnap.docs.map(d => {
         const data = d.data();
         const ts = (data.checkInTime as Timestamp).toDate();
-        return {
-            ...data,
-            loggedAt: format(ts, 'p')
-        };
+        return { ...data, loggedAt: format(ts, 'p') };
     });
 
     return { activities, moods, userGoals };
@@ -107,7 +122,7 @@ async function getDailyData(userId: string, dateStr: string) {
 
 const prompt = ai.definePrompt({
     name: 'generateDailySummaryPrompt',
-    input: { schema: z.any() }, // Input is complex, handled by the flow itself
+    input: { schema: z.any() }, 
     output: { schema: GenerateDailySummaryOutputSchema },
     prompt: `You are an expert life coach and data analyst named 'DayFlow Insights'. Your task is to provide a comprehensive, empathetic, and actionable daily summary for a user based on their logged activities and mood.
 
@@ -143,6 +158,7 @@ const prompt = ai.definePrompt({
         *   'trend': Describe the mood/energy trend. Did it improve, decline, or stay stable?
         *   'highestEnergy': Note when energy was highest, linking it to an activity or time if possible.
         *   'lowestEnergy': Note when energy was lowest.
+    .
     3.  'productivityAnalysis':
         *   'mostProductiveActivity': Identify the activity that seems most productive (e.g., 'Deep Work', 'Office').
         *   'totalProductiveHours': Calculate and sum the hours for productive activities.

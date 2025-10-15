@@ -27,9 +27,6 @@ const auth = getAuth(app);
 
 // Set persistence to session explicitly. This is crucial for redirect-based auth flows in some environments.
 setPersistence(auth, browserSessionPersistence)
-  .then(() => {
-    console.log('Firebase auth persistence set to session.');
-  })
   .catch((error) => {
     console.error('Error setting Firebase auth persistence:', error);
   });
