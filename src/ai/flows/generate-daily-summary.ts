@@ -139,17 +139,17 @@ const prompt = ai.definePrompt({
 
     Analyze the provided data and generate a JSON response with the following structure. Be insightful and supportive in your tone.
 
-    1.  **overallSummary**: Write a narrative summary (2-3 sentences) of the day. Mention key activities and the general mood.
-    2.  **moodAnalysis**:
-        *   `trend`: Describe the mood/energy trend. Did it improve, decline, or stay stable?
-        *   `highestEnergy`: Note when energy was highest, linking it to an activity or time if possible.
-        *   `lowestEnergy`: Note when energy was lowest.
-    3.  **productivityAnalysis**:
-        *   `mostProductiveActivity`: Identify the activity that seems most productive (e.g., 'Deep Work', 'Office').
-        *   `totalProductiveHours`: Calculate and sum the hours for productive activities.
-        *   `peakProductivityTime`: Based on the logging times and activity types, infer a 'peak productivity' period. For example, if most work was logged in the morning, that's the peak.
-    4.  **keyInsights**: Provide 3-4 bullet points of interesting connections or observations. For example, "Your energy was highest after you took a walk," or "You spent 4 hours in deep work, which aligns with your goal of improving focus."
-    5.  **suggestionsForTomorrow**: Provide 2 actionable suggestions. Each suggestion should be directly linked to the user's data and their stated goals. Explain the 'why' behind each suggestion.
+    1.  'overallSummary': Write a narrative summary (2-3 sentences) of the day. Mention key activities and the general mood.
+    2.  'moodAnalysis':
+        *   'trend': Describe the mood/energy trend. Did it improve, decline, or stay stable?
+        *   'highestEnergy': Note when energy was highest, linking it to an activity or time if possible.
+        *   'lowestEnergy': Note when energy was lowest.
+    3.  'productivityAnalysis':
+        *   'mostProductiveActivity': Identify the activity that seems most productive (e.g., 'Deep Work', 'Office').
+        *   'totalProductiveHours': Calculate and sum the hours for productive activities.
+        *   'peakProductivityTime': Based on the logging times and activity types, infer a 'peak productivity' period. For example, if most work was logged in the morning, that's the peak.
+    4.  'keyInsights': Provide 3-4 bullet points of interesting connections or observations. For example, "Your energy was highest after you took a walk," or "You spent 4 hours in deep work, which aligns with your goal of improving focus."
+    5.  'suggestionsForTomorrow': Provide 2 actionable suggestions. Each suggestion should be directly linked to the user's data and their stated goals. Explain the 'why' behind each suggestion.
 
     **Crucial Instructions:**
     - If data is missing (e.g., no mood logs), state that clearly in the relevant analysis section (e.g., "No mood data was logged to analyze.") and do not fabricate insights.
