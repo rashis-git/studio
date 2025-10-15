@@ -71,13 +71,12 @@ async function getDailyData(userId: string, dateStr: string) {
     const activityQuery = query(
         collection(db, 'activity-logs'),
         where('userId', '==', userId),
-        where('timestamp', '>=', dayStart),
-        where('timestamp', '<=', dayEnd)
+        where('date', '==', dateStr)
     );
     const activitySnap = await getDocs(activityQuery);
     const activities = activitySnap.docs.map(d => {
         const data = d.data();
-        const ts = (data.timestamp as Timestamp).toDate();
+        const ts = (data.timestamp as Timestamp)?.toDate() || new Date(); // Fallback to now if timestamp is missing
         return {
             ...data,
             // Format timestamp for the prompt
@@ -167,6 +166,10 @@ const generateDailySummaryFlow = ai.defineFlow(
     async ({ userId, date }) => {
         // 1. Fetch all the data for the day
         const dailyData = await getDailyData(userId, date);
+
+        if (dailyData.activities.length === 0 && dailyData.moods.length === 0) {
+            throw new Error("No data available to generate a summary. Please log some activities or moods.");
+        }
 
         // 2. Call the AI prompt with the fetched data
         const { output } = await prompt(dailyData);
