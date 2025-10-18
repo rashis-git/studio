@@ -40,7 +40,7 @@ export default function RootLayout({
         <ThemeProvider>
           <AuthProvider>
             {children}
-            <FirebaseErrorListener />
+            {process.env.NODE_ENV === 'development' && <FirebaseErrorListener />}
           </AuthProvider>
           <Toaster />
         </ThemeProvider>
