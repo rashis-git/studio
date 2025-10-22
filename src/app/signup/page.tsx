@@ -8,7 +8,7 @@ import { useAuth } from '@/hooks/use-auth';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
 import { Loader2 } from 'lucide-react';
 import { Logo } from '@/components/logo';
@@ -132,6 +132,14 @@ export default function SignupPage() {
             </Link>
           </div>
         </CardContent>
+         <CardFooter className="flex justify-center gap-4 text-xs">
+            <Link href="/terms" className="underline text-muted-foreground">
+                Terms of Service
+            </Link>
+            <Link href="/privacy" className="underline text-muted-foreground">
+                Privacy Policy
+            </Link>
+        </CardFooter>
       </Card>
     </div>
   );
