@@ -350,50 +350,48 @@ const DashboardView = ({ activities, goals }: { activities: Activity[], goals: s
     }
 
     return (
-        <div className="p-4 pt-8 flex flex-col h-[calc(100dvh-4rem)]">
-            <header className="text-center mb-4">
+        <div className="p-4 pt-8 flex flex-col space-y-6">
+            <header className="text-center">
                 <h1 className="text-3xl font-bold font-headline">Today's Activities</h1>
                 <p className="text-muted-foreground">Swipe right to log, or left to skip.</p>
             </header>
 
-            <div className="flex-grow flex items-center justify-center relative">
-                 <div className="relative w-full max-w-xs h-96">
-                    <AnimatePresence>
-                        {activityStack.length === 0 && (
-                            <motion.div
-                                initial={{ opacity: 0, scale: 0.9 }}
-                                animate={{ opacity: 1, scale: 1 }}
-                                className="absolute inset-0 flex flex-col items-center justify-center text-center text-muted-foreground"
-                            >
-                                <p className="font-semibold text-lg">All activities handled!</p>
-                                <p>Come back tomorrow or add a new activity.</p>
-                            </motion.div>
-                         )}
-                        {activityStack.map((activity, index) => (
-                            <motion.div
-                                key={activity.id}
-                                className="absolute w-full h-full"
-                                drag="x"
-                                dragConstraints={{ left: 0, right: 0, top: 0, bottom: 0 }}
-                                onDragEnd={onCardDragEnd}
-                                initial={{ scale: 0.95, y: 10, opacity: 0 }}
-                                animate={{ 
-                                    scale: 1 - (activityStack.length - 1 - index) * 0.05, 
-                                    y: -(activityStack.length - 1 - index) * 10, 
-                                    opacity: 1 
-                                }}
-                                exit={{ x: info => (info.offset.x < 0 ? -300 : 300), opacity: 0 }}
-                                transition={{ duration: 0.3 }}
-                                style={{ zIndex: index, }}
-                            >
-                                <Card className="w-full h-full flex flex-col items-center justify-center bg-card shadow-xl border-2">
-                                    <activity.icon className="w-20 h-20 text-primary mb-4" />
-                                    <h2 className="text-2xl font-semibold">{activity.name}</h2>
-                                </Card>
-                            </motion.div>
-                        ))}
-                    </AnimatePresence>
-                 </div>
+            <div className="relative w-full max-w-xs mx-auto h-96">
+                <AnimatePresence>
+                    {activityStack.length === 0 && (
+                        <motion.div
+                            initial={{ opacity: 0, scale: 0.9 }}
+                            animate={{ opacity: 1, scale: 1 }}
+                            className="absolute inset-0 flex flex-col items-center justify-center text-center text-muted-foreground"
+                        >
+                            <p className="font-semibold text-lg">All activities handled!</p>
+                            <p>Come back tomorrow or add a new activity.</p>
+                        </motion.div>
+                     )}
+                    {activityStack.map((activity, index) => (
+                        <motion.div
+                            key={activity.id}
+                            className="absolute w-full h-full"
+                            drag="x"
+                            dragConstraints={{ left: 0, right: 0, top: 0, bottom: 0 }}
+                            onDragEnd={onCardDragEnd}
+                            initial={{ scale: 0.95, y: 10, opacity: 0 }}
+                            animate={{ 
+                                scale: 1 - (activityStack.length - 1 - index) * 0.05, 
+                                y: -(activityStack.length - 1 - index) * 10, 
+                                opacity: 1 
+                            }}
+                            exit={{ x: info => (info.offset.x < 0 ? -300 : 300), opacity: 0 }}
+                            transition={{ duration: 0.3 }}
+                            style={{ zIndex: index, }}
+                        >
+                            <Card className="w-full h-full flex flex-col items-center justify-center bg-card shadow-xl border-2">
+                                <activity.icon className="w-20 h-20 text-primary mb-4" />
+                                <h2 className="text-2xl font-semibold">{activity.name}</h2>
+                            </Card>
+                        </motion.div>
+                    ))}
+                </AnimatePresence>
             </div>
             
              <div className="flex justify-center items-center gap-8 py-4">
