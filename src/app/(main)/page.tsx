@@ -114,17 +114,14 @@ const OnboardingView = () => {
         if(user) {
             try {
                 const userDocRef = doc(db, 'users', user.uid);
-                await setDoc(userDocRef, { goals: userGoals }, { merge: true });
+                await setDoc(userDocRef, { goals: userGoals, onboarded: true }, { merge: true });
             } catch (error) {
                  toast({ title: "Error", description: "Could not save your goals.", variant: "destructive"});
                  return;
             }
         }
         
-        if (savedActivities.length > 0) {
-            const activityIds = savedActivities.map(a => a.id);
-            localStorage.setItem('selectedActivities', JSON.stringify(activityIds));
-        } else {
+        if (savedActivities.length === 0) {
              toast({ title: "No Activities", description: "Please add at least one activity to continue.", variant: "destructive"});
              return;
         }
@@ -230,9 +227,9 @@ const OnboardingView = () => {
       </Card>
 
        <div className="pt-4 text-center">
-            <Button size="lg" onClick={handleFinish} disabled={isPending}>
+            <Button size="lg" onClick={handleFinish} disabled={isPending || isLoading}>
                 {isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                All Done, Go to Log Page <ArrowRight className="ml-2 h-4 w-4" />
+                Finish Setup & Start Logging <ArrowRight className="ml-2 h-4 w-4" />
             </Button>
       </div>
       
@@ -256,27 +253,30 @@ const DashboardView = ({ activities, goals }: { activities: Activity[], goals: s
     const [isEditingGoals, setIsEditingGoals] = useState(false);
     const [isLogTimeOpen, setIsLogTimeOpen] = useState(false);
     const [activityToLog, setActivityToLog] = useState<Activity | null>(null);
+    const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
     const [isPending, startTransition] = useTransition();
     const { user } = useAuth();
     const { toast } = useToast();
 
     useEffect(() => {
-        // Keep stack in sync if original activities prop changes
         setActivityStack(activities);
     }, [activities]);
 
-    const handleSwipe = (activity: Activity) => {
-        // Remove the swiped activity from the stack
-        setActivityStack(prev => prev.filter(a => a.id !== activity.id));
+    const handleSwipe = () => {
+        setActivityStack(prev => prev.slice(0, prev.length - 1));
     };
 
-    const handleLogTime = (activity: Activity) => {
-        setActivityToLog(activity);
-        setIsLogTimeOpen(true);
+    const handleLogTimeClick = () => {
+        const currentActivity = activityStack[activityStack.length - 1];
+        if (currentActivity) {
+            setActivityToLog(currentActivity);
+            setIsLogTimeOpen(true);
+        }
     };
 
     const handleSaveLog = (duration: number) => {
-        if (!user || !activityToLog || duration <= 0) {
+        const activity = activityToLog; // Use the activity that was set
+        if (!user || !activity || duration <= 0) {
             toast({ title: "Invalid Log", description: "Duration must be greater than 0.", variant: "destructive" });
             return;
         }
@@ -287,17 +287,19 @@ const DashboardView = ({ activities, goals }: { activities: Activity[], goals: s
         startTransition(async () => {
             try {
                 await addDoc(collection(db, 'activity-logs'), {
-                    activityName: activityToLog.name,
+                    activityName: activity.name,
                     durationMinutes: duration,
                     date: todayStr,
                     entryType: 'SwipeLog',
                     timestamp: serverTimestamp(),
                     userId: user.uid,
                 });
-                toast({ title: "Logged!", description: `${activityToLog.name} logged for ${duration} minutes.`});
-                handleSwipe(activityToLog);
+                toast({ title: "Logged!", description: `${activity.name} logged for ${duration} minutes.`});
+                handleSwipe(); // Remove card after logging
             } catch (error: any) {
                 toast({ title: "Error", description: "Could not save log.", variant: "destructive"});
+            } finally {
+                setActivityToLog(null);
             }
         });
     }
@@ -315,14 +317,23 @@ const DashboardView = ({ activities, goals }: { activities: Activity[], goals: s
             }
         });
     }
-
+    
+    const onCardDragEnd = (event: any, info: any) => {
+        const swipeConfidence = Math.abs(info.offset.x) * info.velocity.x;
+        if (swipeConfidence < -10000) { // Swipe left
+            handleSwipe();
+        } else if (swipeConfidence > 10000) { // Swipe right
+            handleLogTimeClick();
+        }
+    }
+    
     const currentActivity = activityStack[activityStack.length - 1];
 
     return (
         <div className="p-4 pt-8 flex flex-col h-[calc(100dvh-4rem)]">
             <header className="text-center mb-4">
                 <h1 className="text-3xl font-bold font-headline">Today's Activities</h1>
-                <p className="text-muted-foreground">Swipe to log your day.</p>
+                <p className="text-muted-foreground">Swipe right to log, or left to skip.</p>
             </header>
 
             <div className="flex-grow flex items-center justify-center">
@@ -333,25 +344,21 @@ const DashboardView = ({ activities, goals }: { activities: Activity[], goals: s
                                 key={activity.id}
                                 className="absolute w-full h-full"
                                 drag="x"
-                                dragConstraints={{ left: 0, right: 0 }}
-                                onDragEnd={(event, { offset, velocity }) => {
-                                    const swipeConfidence = Math.abs(offset.x) * velocity.x;
-                                    if (swipeConfidence < -10000) { // Swipe left
-                                        handleSwipe(activity);
-                                    } else if (swipeConfidence > 10000) { // Swipe right
-                                        handleLogTime(activity);
-                                    }
-                                }}
+                                dragConstraints={{ left: 0, right: 0, top: 0, bottom: 0 }}
+                                onDragEnd={onCardDragEnd}
                                 initial={{ scale: 0.95, y: 10, opacity: 0 }}
-                                animate={{ scale: 1, y: 0, opacity: 1 }}
-                                exit={{ x: offset => (offset.x < 0 ? -300 : 300), opacity: 0 }}
+                                animate={{ 
+                                    scale: 1 - (activityStack.length - 1 - index) * 0.05, 
+                                    y: -(activityStack.length - 1 - index) * 10, 
+                                    opacity: 1 
+                                }}
+                                exit={{ x: info => (info.offset.x < 0 ? -300 : 300), opacity: 0 }}
                                 transition={{ duration: 0.3 }}
                                 style={{
-                                    zIndex: activityStack.length - index,
-                                    transform: `scale(${1 - (activityStack.length - 1 - index) * 0.05}) translateY(-${(activityStack.length - 1 - index) * 10}px)`
+                                    zIndex: index,
                                 }}
                             >
-                                <Card className="w-full h-full flex flex-col items-center justify-center bg-card shadow-xl">
+                                <Card className="w-full h-full flex flex-col items-center justify-center bg-card shadow-xl border-2">
                                     <activity.icon className="w-20 h-20 text-primary mb-4" />
                                     <h2 className="text-2xl font-semibold">{activity.name}</h2>
                                 </Card>
@@ -360,27 +367,27 @@ const DashboardView = ({ activities, goals }: { activities: Activity[], goals: s
                     </AnimatePresence>
                     {activityStack.length === 0 && (
                         <div className="text-center text-muted-foreground">
-                            <p className="font-semibold text-lg">All activities logged!</p>
-                            <p>Come back tomorrow or go to the Log page to add more.</p>
+                            <p className="font-semibold text-lg">All activities logged or skipped!</p>
+                            <p>Come back tomorrow or add a new activity.</p>
                         </div>
                     )}
                  </div>
             </div>
             
             <div className="flex justify-center items-center gap-8 py-4">
-                <Button variant="outline" size="icon" className="w-16 h-16 rounded-full border-4 border-destructive text-destructive hover:bg-destructive hover:text-destructive-foreground" onClick={() => currentActivity && handleSwipe(currentActivity)} disabled={!currentActivity}>
+                <Button variant="outline" size="icon" className="w-16 h-16 rounded-full border-4 border-destructive text-destructive hover:bg-destructive hover:text-destructive-foreground" onClick={handleSwipe} disabled={!currentActivity}>
                     <X size={32} />
                 </Button>
-                <Button variant="outline" size="icon" className="w-12 h-12 rounded-full" >
+                <Button variant="outline" size="icon" className="w-12 h-12 rounded-full" onClick={() => setIsAddDialogOpen(true)}>
                     <PlusCircle size={24} />
                 </Button>
-                 <Button variant="outline" size="icon" className="w-16 h-16 rounded-full border-4 border-primary text-primary hover:bg-primary hover:text-primary-foreground" onClick={() => currentActivity && handleLogTime(currentActivity)} disabled={!currentActivity}>
+                 <Button variant="outline" size="icon" className="w-16 h-16 rounded-full border-4 border-primary text-primary hover:bg-primary hover:text-primary-foreground" onClick={handleLogTimeClick} disabled={!currentActivity}>
                     <Check size={32} />
                 </Button>
             </div>
 
             <Card className="mt-auto">
-                <CardHeader className="flex flex-row items-center justify-between">
+                <CardHeader className="flex flex-row items-center justify-between pb-4">
                     <div>
                         <CardTitle>Your Goals</CardTitle>
                         <CardDescription>Your focus for today and beyond.</CardDescription>
@@ -424,6 +431,17 @@ const DashboardView = ({ activities, goals }: { activities: Activity[], goals: s
                     onSave={handleSaveLog}
                 />
             )}
+            
+            <AddActivityDialog
+                open={isAddDialogOpen}
+                onOpenChange={setIsAddDialogOpen}
+                onActivityAdded={() => {
+                    // This is a temporary solution to refresh the stack.
+                    // A better solution would be to update the state without a full reload.
+                    window.location.reload();
+                }}
+                user={user}
+            />
         </div>
     );
 };
@@ -443,32 +461,41 @@ export default function TodayPage() {
       return;
     }
     if (!user) {
-      // Auth hook will redirect, but we can stop processing here
+      // Auth hook will redirect, so we can stop processing.
       return;
     }
 
     const fetchInitialData = async () => {
       try {
-        const activitiesCollectionRef = collection(db, 'users', user.uid, 'savedActivities');
-        const activitiesSnapshot = await getDocs(activitiesCollectionRef);
-        const userActivities: Activity[] = activitiesSnapshot.docs.map((doc) => {
-          const data = doc.data();
-          const mockActivity = mockActivities.find(a => a.name === data.activityName);
-          return {
-            id: doc.id,
-            name: data.activityName,
-            icon: mockActivity ? mockActivity.icon : PlusCircle,
-          };
-        });
-
+        // Check if user has completed onboarding
         const userDocRef = doc(db, 'users', user.uid);
         const userDocSnap = await getDoc(userDocRef);
-        const userGoals = userDocSnap.exists() ? userDocSnap.data().goals || '' : '';
-        
-        setInitialData({ activities: userActivities, goals: userGoals });
+        const userData = userDocSnap.data();
+        const hasOnboarded = userData?.onboarded === true;
+        const userGoals = userData?.goals || '';
 
-        if (userActivities.length > 0) {
-          setView('dashboard');
+        if (hasOnboarded) {
+          const activitiesCollectionRef = collection(db, 'users', user.uid, 'savedActivities');
+          const activitiesSnapshot = await getDocs(activitiesCollectionRef);
+          const userActivities: Activity[] = activitiesSnapshot.docs.map((doc) => {
+            const data = doc.data();
+            const mockActivity = mockActivities.find(a => a.name === data.activityName);
+            return {
+              id: doc.id,
+              name: data.activityName,
+              icon: mockActivity ? mockActivity.icon : PlusCircle,
+            };
+          });
+          
+          if (userActivities.length > 0) {
+              setInitialData({ activities: userActivities.reverse(), goals: userGoals });
+              setView('dashboard');
+          } else {
+              // This case happens if user onboarded but deleted all activities.
+              // Show them onboarding again to re-add activities.
+              await setDoc(userDocRef, { onboarded: false }, { merge: true });
+              setView('onboarding');
+          }
         } else {
           setView('onboarding');
         }
