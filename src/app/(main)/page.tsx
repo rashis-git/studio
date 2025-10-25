@@ -356,9 +356,19 @@ const DashboardView = ({ activities, goals }: { activities: Activity[], goals: s
                 <p className="text-muted-foreground">Swipe right to log, or left to skip.</p>
             </header>
 
-            <div className="flex-grow flex items-center justify-center">
-                 <div className="relative w-full max-w-xs h-80">
+            <div className="flex-grow flex items-center justify-center relative">
+                 <div className="relative w-full max-w-xs h-96">
                     <AnimatePresence>
+                        {activityStack.length === 0 && (
+                            <motion.div
+                                initial={{ opacity: 0, scale: 0.9 }}
+                                animate={{ opacity: 1, scale: 1 }}
+                                className="absolute inset-0 flex flex-col items-center justify-center text-center text-muted-foreground"
+                            >
+                                <p className="font-semibold text-lg">All activities handled!</p>
+                                <p>Come back tomorrow or add a new activity.</p>
+                            </motion.div>
+                         )}
                         {activityStack.map((activity, index) => (
                             <motion.div
                                 key={activity.id}
@@ -383,16 +393,10 @@ const DashboardView = ({ activities, goals }: { activities: Activity[], goals: s
                             </motion.div>
                         ))}
                     </AnimatePresence>
-                    {activityStack.length === 0 && (
-                        <div className="text-center text-muted-foreground">
-                            <p className="font-semibold text-lg">All activities logged or skipped!</p>
-                            <p>Come back tomorrow or add a new activity.</p>
-                        </div>
-                    )}
                  </div>
             </div>
             
-            <div className="flex justify-center items-center gap-8 py-4">
+             <div className="flex justify-center items-center gap-8 py-4">
                 <Button variant="ghost" size="icon" className="w-20 h-20 rounded-full text-destructive/80 hover:bg-destructive/10 hover:text-destructive" onClick={handleSwipe} disabled={!currentActivity}>
                     <X size={40} />
                 </Button>
@@ -404,7 +408,7 @@ const DashboardView = ({ activities, goals }: { activities: Activity[], goals: s
                 </Button>
             </div>
 
-            <Card className="mt-auto">
+            <Card className="shrink-0">
                 <CardHeader className="flex flex-row items-start justify-between pb-4">
                     <div>
                         <CardTitle>Your Goals</CardTitle>
@@ -507,6 +511,8 @@ export default function TodayPage() {
               setInitialData({ activities: userActivities.reverse(), goals: userGoals });
               setView('dashboard');
           } else {
+              // This case handles a user who onboarded but deleted all activities.
+              // Treat them as needing to re-onboard to select at least one activity.
               await setDoc(userDocRef, { onboarded: false }, { merge: true });
               setView('onboarding');
           }
