@@ -224,7 +224,7 @@ const OnboardingView = () => {
                 id="user-goals"
                 placeholder="e.g., Improve my focus on work, spend more quality time with family, exercise three times a week..."
                 value={userGoals}
-                onChange={(e) => setUserGoals(e.g.target.value)}
+                onChange={(e) => setUserGoals(e.target.value)}
                 rows={3}
             />
         </CardContent>
@@ -331,7 +331,7 @@ const DashboardView = ({ activities, goals }: { activities: Activity[], goals: s
         }
     }
     
-    const currentActivity = activityStack[activityStack.length - 1];
+    const currentActivity = activityStack.length > 0 ? activityStack[activityStack.length - 1] : null;
 
     const refreshActivities = async () => {
         if(!user) return;
@@ -357,7 +357,7 @@ const DashboardView = ({ activities, goals }: { activities: Activity[], goals: s
             </header>
 
             <div className="flex-grow flex items-center justify-center">
-                 <div className="relative w-full max-w-xs h-64">
+                 <div className="relative w-full max-w-xs h-80">
                     <AnimatePresence>
                         {activityStack.map((activity, index) => (
                             <motion.div
@@ -393,19 +393,19 @@ const DashboardView = ({ activities, goals }: { activities: Activity[], goals: s
             </div>
             
             <div className="flex justify-center items-center gap-8 py-4">
-                <Button variant="outline" size="icon" className="w-16 h-16 rounded-full border-4 border-destructive/50 text-destructive/80 bg-destructive/10 hover:bg-destructive/20 hover:text-destructive" onClick={handleSwipe} disabled={!currentActivity}>
-                    <X size={32} />
+                <Button variant="ghost" size="icon" className="w-20 h-20 rounded-full text-destructive/80 hover:bg-destructive/10 hover:text-destructive" onClick={handleSwipe} disabled={!currentActivity}>
+                    <X size={40} />
                 </Button>
-                <Button variant="outline" size="icon" className="w-12 h-12 rounded-full border-2" onClick={() => setIsAddDialogOpen(true)}>
-                    <PlusCircle size={24} />
+                <Button variant="outline" size="icon" className="w-16 h-16 rounded-full border-2" onClick={() => setIsAddDialogOpen(true)}>
+                    <PlusCircle size={32} />
                 </Button>
-                 <Button variant="outline" size="icon" className="w-16 h-16 rounded-full border-4 border-primary/50 text-primary/80 bg-primary/10 hover:bg-primary/20 hover:text-primary" onClick={handleLogTimeClick} disabled={!currentActivity}>
-                    <Check size={32} />
+                 <Button variant="ghost" size="icon" className="w-20 h-20 rounded-full text-primary/80 hover:bg-primary/10 hover:text-primary" onClick={handleLogTimeClick} disabled={!currentActivity}>
+                    <Check size={40} />
                 </Button>
             </div>
 
             <Card className="mt-auto">
-                <CardHeader className="flex flex-row items-center justify-between pb-4">
+                <CardHeader className="flex flex-row items-start justify-between pb-4">
                     <div>
                         <CardTitle>Your Goals</CardTitle>
                         <CardDescription>Your focus for today and beyond.</CardDescription>
@@ -433,7 +433,7 @@ const DashboardView = ({ activities, goals }: { activities: Activity[], goals: s
                             </div>
                         </div>
                     ) : (
-                        <p className="text-sm text-muted-foreground italic min-h-[40px] pt-1">
+                        <p className="text-sm text-muted-foreground italic min-h-[40px] pt-1 whitespace-pre-wrap">
                             {userGoals || "No goals set yet. Click the pencil to add some!"}
                         </p>
                     )}
