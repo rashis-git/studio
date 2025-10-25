@@ -1,23 +1,27 @@
 
 'use client';
 
-import { useState, useEffect, useTransition } from 'react';
+import { useState, useEffect, useTransition, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/hooks/use-auth';
 import { db } from '@/lib/firebase';
 import { collection, query, getDocs, doc, writeBatch, where, addDoc, serverTimestamp, deleteDoc, setDoc, getDoc } from 'firebase/firestore';
 import type { Activity } from '@/lib/types';
 import { Button } from '@/components/ui/button';
-import { Loader2, PlusCircle, ArrowRight, CheckCircle, Trash2 } from 'lucide-react';
+import { Loader2, PlusCircle, ArrowRight, CheckCircle, Trash2, X, Check, Pencil } from 'lucide-react';
 import { mockActivities } from '@/lib/data';
 import { AddActivityDialog } from '@/components/add-activity-dialog';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
+import { motion, AnimatePresence } from 'framer-motion';
+import { LogTimeDialog } from '@/components/log-time-dialog';
 
-
-export default function OnboardingPage() {
+// =================================================================
+// Onboarding View for New Users
+// =================================================================
+const OnboardingView = () => {
   const router = useRouter();
   const { user } = useAuth();
   const [savedActivities, setSavedActivities] = useState<Activity[]>([]);
@@ -27,7 +31,7 @@ export default function OnboardingPage() {
   const [isPending, startTransition] = useTransition();
   const { toast } = useToast();
 
-  const fetchUserData = async () => {
+  const fetchUserData = useCallback(async () => {
     if (!user) {
       setIsLoading(false);
       return;
@@ -36,7 +40,6 @@ export default function OnboardingPage() {
     setIsLoading(true);
 
     try {
-      // Fetch saved activities
       const activitiesCollectionRef = collection(db, 'users', user.uid, 'savedActivities');
       const q = query(activitiesCollectionRef);
       const querySnapshot = await getDocs(q);
@@ -52,7 +55,6 @@ export default function OnboardingPage() {
       });
       setSavedActivities(userActivities.sort((a, b) => a.name.localeCompare(b.name)));
 
-      // Fetch user goals
       const userDocRef = doc(db, 'users', user.uid);
       const userDocSnap = await getDoc(userDocRef);
       if (userDocSnap.exists()) {
@@ -65,15 +67,11 @@ export default function OnboardingPage() {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [user, toast]);
 
   useEffect(() => {
-    if(user) {
-      fetchUserData();
-    } else {
-      setIsLoading(false);
-    }
-  }, [user]);
+    fetchUserData();
+  }, [fetchUserData]);
 
   const handleAddDefaultActivity = (activity: Activity) => {
     if (!user) return;
@@ -115,21 +113,23 @@ export default function OnboardingPage() {
     startTransition(async () => {
         if(user) {
             try {
-                // Save user goals
                 const userDocRef = doc(db, 'users', user.uid);
                 await setDoc(userDocRef, { goals: userGoals }, { merge: true });
             } catch (error) {
                  toast({ title: "Error", description: "Could not save your goals.", variant: "destructive"});
-                 return; // Don't proceed if goals fail to save
+                 return;
             }
         }
         
-        // Save selected activities to localStorage and navigate
         if (savedActivities.length > 0) {
             const activityIds = savedActivities.map(a => a.id);
             localStorage.setItem('selectedActivities', JSON.stringify(activityIds));
+        } else {
+             toast({ title: "No Activities", description: "Please add at least one activity to continue.", variant: "destructive"});
+             return;
         }
-        router.push('/log');
+        // Force a reload to trigger the view switch in the parent component
+        window.location.reload();
     });
   }
 
@@ -244,4 +244,258 @@ export default function OnboardingPage() {
       />
     </div>
   );
+};
+
+
+// =================================================================
+// Dashboard View for Returning Users
+// =================================================================
+const DashboardView = ({ activities, goals }: { activities: Activity[], goals: string }) => {
+    const [activityStack, setActivityStack] = useState(activities);
+    const [userGoals, setUserGoals] = useState(goals);
+    const [isEditingGoals, setIsEditingGoals] = useState(false);
+    const [isLogTimeOpen, setIsLogTimeOpen] = useState(false);
+    const [activityToLog, setActivityToLog] = useState<Activity | null>(null);
+    const [isPending, startTransition] = useTransition();
+    const { user } = useAuth();
+    const { toast } = useToast();
+
+    useEffect(() => {
+        // Keep stack in sync if original activities prop changes
+        setActivityStack(activities);
+    }, [activities]);
+
+    const handleSwipe = (activity: Activity) => {
+        // Remove the swiped activity from the stack
+        setActivityStack(prev => prev.filter(a => a.id !== activity.id));
+    };
+
+    const handleLogTime = (activity: Activity) => {
+        setActivityToLog(activity);
+        setIsLogTimeOpen(true);
+    };
+
+    const handleSaveLog = (duration: number) => {
+        if (!user || !activityToLog || duration <= 0) {
+            toast({ title: "Invalid Log", description: "Duration must be greater than 0.", variant: "destructive" });
+            return;
+        }
+
+        const today = new Date();
+        const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+        
+        startTransition(async () => {
+            try {
+                await addDoc(collection(db, 'activity-logs'), {
+                    activityName: activityToLog.name,
+                    durationMinutes: duration,
+                    date: todayStr,
+                    entryType: 'SwipeLog',
+                    timestamp: serverTimestamp(),
+                    userId: user.uid,
+                });
+                toast({ title: "Logged!", description: `${activityToLog.name} logged for ${duration} minutes.`});
+                handleSwipe(activityToLog);
+            } catch (error: any) {
+                toast({ title: "Error", description: "Could not save log.", variant: "destructive"});
+            }
+        });
+    }
+    
+    const handleSaveGoals = () => {
+        if (!user) return;
+        startTransition(async () => {
+             try {
+                const userDocRef = doc(db, 'users', user.uid);
+                await setDoc(userDocRef, { goals: userGoals }, { merge: true });
+                toast({ title: "Goals Updated!", description: "Your goals have been saved." });
+                setIsEditingGoals(false);
+            } catch (error) {
+                 toast({ title: "Error", description: "Could not save your goals.", variant: "destructive"});
+            }
+        });
+    }
+
+    const currentActivity = activityStack[activityStack.length - 1];
+
+    return (
+        <div className="p-4 pt-8 flex flex-col h-[calc(100dvh-4rem)]">
+            <header className="text-center mb-4">
+                <h1 className="text-3xl font-bold font-headline">Today's Activities</h1>
+                <p className="text-muted-foreground">Swipe to log your day.</p>
+            </header>
+
+            <div className="flex-grow flex items-center justify-center">
+                 <div className="relative w-full max-w-xs h-64">
+                    <AnimatePresence>
+                        {activityStack.map((activity, index) => (
+                            <motion.div
+                                key={activity.id}
+                                className="absolute w-full h-full"
+                                drag="x"
+                                dragConstraints={{ left: 0, right: 0 }}
+                                onDragEnd={(event, { offset, velocity }) => {
+                                    const swipeConfidence = Math.abs(offset.x) * velocity.x;
+                                    if (swipeConfidence < -10000) { // Swipe left
+                                        handleSwipe(activity);
+                                    } else if (swipeConfidence > 10000) { // Swipe right
+                                        handleLogTime(activity);
+                                    }
+                                }}
+                                initial={{ scale: 0.95, y: 10, opacity: 0 }}
+                                animate={{ scale: 1, y: 0, opacity: 1 }}
+                                exit={{ x: offset => (offset.x < 0 ? -300 : 300), opacity: 0 }}
+                                transition={{ duration: 0.3 }}
+                                style={{
+                                    zIndex: activityStack.length - index,
+                                    transform: `scale(${1 - (activityStack.length - 1 - index) * 0.05}) translateY(-${(activityStack.length - 1 - index) * 10}px)`
+                                }}
+                            >
+                                <Card className="w-full h-full flex flex-col items-center justify-center bg-card shadow-xl">
+                                    <activity.icon className="w-20 h-20 text-primary mb-4" />
+                                    <h2 className="text-2xl font-semibold">{activity.name}</h2>
+                                </Card>
+                            </motion.div>
+                        ))}
+                    </AnimatePresence>
+                    {activityStack.length === 0 && (
+                        <div className="text-center text-muted-foreground">
+                            <p className="font-semibold text-lg">All activities logged!</p>
+                            <p>Come back tomorrow or go to the Log page to add more.</p>
+                        </div>
+                    )}
+                 </div>
+            </div>
+            
+            <div className="flex justify-center items-center gap-8 py-4">
+                <Button variant="outline" size="icon" className="w-16 h-16 rounded-full border-4 border-destructive text-destructive hover:bg-destructive hover:text-destructive-foreground" onClick={() => currentActivity && handleSwipe(currentActivity)} disabled={!currentActivity}>
+                    <X size={32} />
+                </Button>
+                <Button variant="outline" size="icon" className="w-12 h-12 rounded-full" >
+                    <PlusCircle size={24} />
+                </Button>
+                 <Button variant="outline" size="icon" className="w-16 h-16 rounded-full border-4 border-primary text-primary hover:bg-primary hover:text-primary-foreground" onClick={() => currentActivity && handleLogTime(currentActivity)} disabled={!currentActivity}>
+                    <Check size={32} />
+                </Button>
+            </div>
+
+            <Card className="mt-auto">
+                <CardHeader className="flex flex-row items-center justify-between">
+                    <div>
+                        <CardTitle>Your Goals</CardTitle>
+                        <CardDescription>Your focus for today and beyond.</CardDescription>
+                    </div>
+                    <Button variant="ghost" size="icon" onClick={() => setIsEditingGoals(!isEditingGoals)}>
+                        <Pencil className="h-4 w-4" />
+                    </Button>
+                </CardHeader>
+                <CardContent>
+                    {isEditingGoals ? (
+                        <div className="space-y-4">
+                            <Textarea 
+                                id="user-goals-dashboard"
+                                value={userGoals}
+                                onChange={(e) => setUserGoals(e.target.value)}
+                                rows={3}
+                                className="text-sm"
+                            />
+                            <div className="flex justify-end gap-2">
+                                <Button variant="ghost" onClick={() => setIsEditingGoals(false)}>Cancel</Button>
+                                <Button onClick={handleSaveGoals} disabled={isPending}>
+                                     {isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                                    Save
+                                </Button>
+                            </div>
+                        </div>
+                    ) : (
+                        <p className="text-sm text-muted-foreground italic">
+                            {userGoals || "No goals set yet. Click the pencil to add some!"}
+                        </p>
+                    )}
+                </CardContent>
+            </Card>
+
+            {activityToLog && (
+                <LogTimeDialog
+                    open={isLogTimeOpen}
+                    onOpenChange={setIsLogTimeOpen}
+                    activityName={activityToLog.name}
+                    initialDuration={60}
+                    onSave={handleSaveLog}
+                />
+            )}
+        </div>
+    );
+};
+
+
+// =================================================================
+// Main Page Component
+// =================================================================
+export default function TodayPage() {
+  const { user, loading: authLoading } = useAuth();
+  const [view, setView] = useState<'loading' | 'onboarding' | 'dashboard'>('loading');
+  const [initialData, setInitialData] = useState<{ activities: Activity[], goals: string }>({ activities: [], goals: '' });
+
+  useEffect(() => {
+    if (authLoading) {
+      setView('loading');
+      return;
+    }
+    if (!user) {
+      // Auth hook will redirect, but we can stop processing here
+      return;
+    }
+
+    const fetchInitialData = async () => {
+      try {
+        const activitiesCollectionRef = collection(db, 'users', user.uid, 'savedActivities');
+        const activitiesSnapshot = await getDocs(activitiesCollectionRef);
+        const userActivities: Activity[] = activitiesSnapshot.docs.map((doc) => {
+          const data = doc.data();
+          const mockActivity = mockActivities.find(a => a.name === data.activityName);
+          return {
+            id: doc.id,
+            name: data.activityName,
+            icon: mockActivity ? mockActivity.icon : PlusCircle,
+          };
+        });
+
+        const userDocRef = doc(db, 'users', user.uid);
+        const userDocSnap = await getDoc(userDocRef);
+        const userGoals = userDocSnap.exists() ? userDocSnap.data().goals || '' : '';
+        
+        setInitialData({ activities: userActivities, goals: userGoals });
+
+        if (userActivities.length > 0) {
+          setView('dashboard');
+        } else {
+          setView('onboarding');
+        }
+      } catch (error) {
+        console.error("Failed to fetch initial data:", error);
+        setView('onboarding'); // Fallback to onboarding on error
+      }
+    };
+
+    fetchInitialData();
+  }, [user, authLoading]);
+
+  if (view === 'loading') {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <Loader2 className="w-12 h-12 animate-spin text-primary" />
+      </div>
+    );
+  }
+
+  if (view === 'onboarding') {
+    return <OnboardingView />;
+  }
+
+  if (view === 'dashboard') {
+    return <DashboardView activities={initialData.activities} goals={initialData.goals} />;
+  }
+
+  return null;
 }
